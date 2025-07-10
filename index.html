@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOW Generator - File Uploader</title>
+    <!-- Basic styling for a cleaner look -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 600px; /* Increased width for better viewing */
+        }
+        h1 {
+            color: #1a237e;
+            margin-bottom: 1.5rem;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        input[type="file"] {
+            border: 2px dashed #c5cae9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        input[type="file"]::file-selector-button {
+            margin-right: 1rem;
+            border: none;
+            background: #3f51b5;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color .2s ease-in-out;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background: #303f9f;
+        }
+        .main-button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #43a047;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .main-button:hover {
+            background-color: #388e3c;
+        }
+        #response-area {
+             display: none; /* Hidden by default */
+        }
+        #response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+        #copy-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            color: #fff;
+            background-color: #5c6bc0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        #copy-button:hover {
+            background-color: #3f51b5;
+        }
+        #response {
+            margin-top: 0.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            word-wrap: break-word;
+            text-align: left;
+            white-space: pre-wrap; /* Respects newlines in the text */
+            max-height: 40vh; /* Limits the height */
+            overflow-y: auto; /* Adds a scrollbar if content overflows */
+        }
+
+        /* Styling for the new Branding Assets button */
+        #branding-assets-button {
+            display: inline-block;
+            background-color: #FFFF00; /* eComplete 'Checkout Gold' */
+            color: #121212; /* eComplete 'Midnight Trade' */
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Arial', sans-serif; /* Websafe font */
+            font-size: 16px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-left: 10px;
+            vertical-align: top;
+        }
+
+        #branding-assets-button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Upload BRD Document</h1>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" id="brdFileInput" name="brdFile" required>
+            <button type="submit" class="main-button">Generate SOW</button>
+        </form>
+
+        <!-- This area contains the response and the copy button -->
+        <div id="response-area" style="display: none;">
+            <h3>Server Response:</h3>
+            <pre id="response"></pre> <!-- Using <pre> for better formatting -->
+            <div id="output-controls" style="display: none; margin-top: 15px;">
+                <button id="copy-button">Copy Markdown</button>
+                <a href="https://drive.google.com/drive/folders/1FZfowYTtmBif3G8FyGWJA8-MQ_beoRmv" target="_blank" id="branding-assets-button">
+                    Get Branding Assets
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const responseArea = document.getElementById('response-area');
+        const responsePre = document.getElementById('response');
+        const outputControls = document.getElementById('output-controls'); // Get the new div
+        const copyButton = document.getElementById('copy-button');
+        // const brandingAssetsButton = document.getElementById('branding-assets-button'); // Not strictly needed for visibility control if parent is handled
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            responseArea.style.display = 'block'; // Show the response area
+            responsePre.style.backgroundColor = '#fff3e0';
+            responsePre.style.color = '#e65100';
+            responsePre.textContent = 'Uploading and processing... Please wait.';
+            outputControls.style.display = 'none'; // Hide output controls div while loading
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('http://localhost:8000/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                responsePre.style.backgroundColor = '#e8f5e9';
+                responsePre.style.color = '#2e7d32';
+
+                if(result.fullSow) {
+                    // If we get the SOW, display it
+                    responsePre.textContent = result.fullSow;
+                    outputControls.style.display = 'block'; // Show output controls div
+                    copyButton.textContent = 'Copy Markdown'; // Reset button text
+                } else {
+                    // Otherwise, display the whole JSON response
+                    responsePre.textContent = JSON.stringify(result, null, 2);
+                    outputControls.style.display = 'none'; // Ensure controls are hidden if no SOW
+                }
+
+
+            } catch (error) {
+                responsePre.style.backgroundColor = '#ffebee';
+                responsePre.style.color = '#c62828';
+                responsePre.textContent = 'Error: Could not connect to the server. Is it running?';
+                outputControls.style.display = 'none'; // Ensure controls are hidden on error
+                console.error('Upload failed:', error);
+            }
+        });
+
+        copyButton.addEventListener('click', () => {
+            const textToCopy = responsePre.textContent;
+
+            // A reliable way to copy to clipboard in various environments
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            // Provide user feedback
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy Markdown';
+            }, 2000);
+        });
+    </script>
+
+</body>
+</html>
