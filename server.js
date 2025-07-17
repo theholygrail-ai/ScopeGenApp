@@ -5,12 +5,23 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const mammoth = require('mammoth');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 const { GoogleAuth } = require('google-auth-library');
 const pdf = require('pdf-parse');
+
+const tempDir = path.join('/tmp', 'headshots');
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+}
+const cropOverrides = {};
+
+function slugify(name) {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 // 2. Initialize Express App & Gemini AI
 const app = express();
@@ -975,6 +986,34 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
+app.use('/images/headshots', express.static(tempDir));
+
+app.post('/images/crop', (req, res) => {
+    if (!req.files || !req.files.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+    }
+    const stakeholder = req.body.stakeholder || 'unknown';
+    const slug = slugify(stakeholder);
+    const savePath = path.join(tempDir, `${slug}.png`);
+    req.files.file.mv(savePath, err => {
+        if (err) {
+            console.error('Failed to save crop', err);
+            return res.status(500).json({ message: 'Failed to save crop' });
+        }
+        cropOverrides[slug] = savePath;
+        res.json({ success: true });
+    });
+});
+
+app.post('/images/crop/reset', (req, res) => {
+    const stakeholder = req.body.stakeholder || 'unknown';
+    const slug = slugify(stakeholder);
+    const filePath = path.join(tempDir, `${slug}.png`);
+    fs.unlink(filePath, () => {
+        delete cropOverrides[slug];
+        res.json({ success: true });
+    });
+});
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
 app.post('/upload', async (req, res) => {

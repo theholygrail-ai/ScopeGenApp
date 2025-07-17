@@ -18,6 +18,9 @@
     "google-auth-library": "^9.11.0",
     "googleapis": "^137.1.0",
     "mammoth": "^1.7.2",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "cropperjs": "^1.6.1",
+    "micromodal": "^0.4.10",
+    "@toast-ui/editor": "^3.2.2"
   }
 }

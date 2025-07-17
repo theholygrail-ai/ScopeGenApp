@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOW Generator - File Uploader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@toast-ui/editor/dist/toastui-editor.min.css" />
     <!-- Basic styling for a cleaner look -->
     <style>
         body {
@@ -89,18 +91,52 @@
         #copy-button:hover {
             background-color: #3f51b5;
         }
-        #response {
+        #editor-container {
             margin-top: 0.5rem;
-            padding: 1rem;
             border-radius: 8px;
             background-color: #e8f5e9;
             color: #2e7d32;
             word-wrap: break-word;
             text-align: left;
-            white-space: pre-wrap; /* Respects newlines in the text */
-            max-height: 40vh; /* Limits the height */
-            overflow-y: auto; /* Adds a scrollbar if content overflows */
+            max-height: 60vh;
+            overflow-y: auto;
         }
+        #toggle-edit {
+            margin-top: 10px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            color: #fff;
+            background-color: #5c6bc0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        #toggle-edit:hover { background-color: #3f51b5; }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #323232;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 9999;
+        }
+        .toast.show { opacity: 1; }
+
+        .stakeholder { position: relative; display: inline-block; margin: 10px; }
+        .stakeholder img { width: 120px; height: 120px; border-radius: 4px; }
+        .stakeholder button { position: absolute; background: rgba(0,0,0,0.6); color:#fff; border:none; cursor:pointer; padding:2px 5px; font-size:12px; }
+        .stakeholder .edit-headshot { top:5px; right:5px; }
+        .stakeholder .reset-headshot { bottom:5px; right:5px; }
+
+        .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); }
+        .modal-container { background:#fff; max-width:90%; margin:10vh auto; padding:10px; border-radius:8px; }
+        .modal-content img { max-width:100%; }
+        .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
 
         /* Styling for the new Branding Assets button */
         #branding-assets-button {
@@ -136,7 +172,8 @@
         <!-- This area contains the response and the copy button -->
         <div id="response-area" style="display: none;">
             <h3>Server Response:</h3>
-            <pre id="response"></pre> <!-- Using <pre> for better formatting -->
+            <div id="editor-container"></div>
+            <button id="toggle-edit" style="display:none;">✎ Edit SOW</button>
             <div id="output-controls" style="display: none; margin-top: 15px;">
                 <button id="copy-button">Copy Markdown</button>
                 <a href="https://drive.google.com/drive/folders/1FZfowYTtmBif3G8FyGWJA8-MQ_beoRmv" target="_blank" id="branding-assets-button">
@@ -144,12 +181,47 @@
                 </a>
             </div>
         </div>
+
+        <div id="stakeholders" style="margin-top:20px; display:none;">
+            <h3>Stakeholders</h3>
+            <div class="stakeholder" data-name="Stakeholder A">
+                <img src="https://via.placeholder.com/150" alt="Stakeholder headshot">
+                <button class="edit-headshot">✎ Edit</button>
+                <button class="reset-headshot">Reset</button>
+            </div>
+            <div class="stakeholder" data-name="Stakeholder B">
+                <img src="https://via.placeholder.com/150" alt="Stakeholder headshot">
+                <button class="edit-headshot">✎ Edit</button>
+                <button class="reset-headshot">Reset</button>
+            </div>
+        </div>
+
+        <div id="crop-modal" aria-hidden="true">
+            <div class="modal-overlay" data-micromodal-close></div>
+            <div role="dialog" aria-modal="true" class="modal-container">
+                <header class="modal-header">
+                    <button aria-label="Close modal" data-micromodal-close>×</button>
+                </header>
+                <main class="modal-content">
+                    <img id="crop-image" src="" alt="Stakeholder headshot">
+                </main>
+                <footer class="modal-footer">
+                    <button id="save-crop">Save Crop</button>
+                    <button data-micromodal-close>Cancel</button>
+                </footer>
+            </div>
+        </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="https://unpkg.com/micromodal/dist/micromodal.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@toast-ui/editor/dist/toastui-editor-all.min.js"></script>
     <script>
         const form = document.getElementById('uploadForm');
         const responseArea = document.getElementById('response-area');
-        const responsePre = document.getElementById('response');
+        const editorContainer = document.getElementById('editor-container');
+        const toggleEditBtn = document.getElementById('toggle-edit');
+        let editor;
         const outputControls = document.getElementById('output-controls'); // Get the new div
         const copyButton = document.getElementById('copy-button');
         // const brandingAssetsButton = document.getElementById('branding-assets-button'); // Not strictly needed for visibility control if parent is handled
@@ -157,11 +229,9 @@
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            responseArea.style.display = 'block'; // Show the response area
-            responsePre.style.backgroundColor = '#fff3e0';
-            responsePre.style.color = '#e65100';
-            responsePre.textContent = 'Uploading and processing... Please wait.';
-            outputControls.style.display = 'none'; // Hide output controls div while loading
+            responseArea.style.display = 'block';
+            editorContainer.textContent = 'Uploading and processing... Please wait.';
+            outputControls.style.display = 'none';
 
             const formData = new FormData(form);
 
@@ -173,32 +243,35 @@
 
                 const result = await response.json();
 
-                responsePre.style.backgroundColor = '#e8f5e9';
-                responsePre.style.color = '#2e7d32';
-
                 if(result.fullSow) {
-                    // If we get the SOW, display it
-                    responsePre.textContent = result.fullSow;
-                    outputControls.style.display = 'block'; // Show output controls div
-                    copyButton.textContent = 'Copy Markdown'; // Reset button text
+                    if(editor) editor.destroy();
+                    editor = new toastui.Editor({
+                        el: editorContainer,
+                        height: '60vh',
+                        initialValue: localStorage.getItem('sowDraft') || result.fullSow,
+                        viewer: true,
+                        usageStatistics: false
+                    });
+                    editor.on('change', autoSaveHandler);
+                    toggleEditBtn.style.display = 'inline-block';
+                    outputControls.style.display = 'block';
+                    copyButton.textContent = 'Copy Markdown';
                 } else {
                     // Otherwise, display the whole JSON response
-                    responsePre.textContent = JSON.stringify(result, null, 2);
+                    editorContainer.textContent = JSON.stringify(result, null, 2);
                     outputControls.style.display = 'none'; // Ensure controls are hidden if no SOW
                 }
 
 
             } catch (error) {
-                responsePre.style.backgroundColor = '#ffebee';
-                responsePre.style.color = '#c62828';
-                responsePre.textContent = 'Error: Could not connect to the server. Is it running?';
-                outputControls.style.display = 'none'; // Ensure controls are hidden on error
+                editorContainer.textContent = 'Error: Could not connect to the server. Is it running?';
+                outputControls.style.display = 'none';
                 console.error('Upload failed:', error);
             }
         });
 
         copyButton.addEventListener('click', () => {
-            const textToCopy = responsePre.textContent;
+            const textToCopy = editor ? editor.getMarkdown() : editorContainer.textContent;
 
             // A reliable way to copy to clipboard in various environments
             const textArea = document.createElement('textarea');
@@ -213,6 +286,82 @@
             setTimeout(() => {
                 copyButton.textContent = 'Copy Markdown';
             }, 2000);
+        });
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.classList.add('show'), 50);
+            setTimeout(() => {
+                t.classList.remove('show');
+                setTimeout(() => t.remove(), 300);
+            }, 2000);
+        }
+
+        toggleEditBtn.addEventListener('click', () => {
+            if(editor.isReadOnly()) {
+                editor.changeMode('wysiwyg');
+                editor.isReadOnly(false);
+                toggleEditBtn.textContent = 'Save SOW';
+            } else {
+                const markdown = editor.getMarkdown();
+                editor.isReadOnly(true);
+                toggleEditBtn.textContent = '✎ Edit SOW';
+                localStorage.setItem('sowDraft', markdown);
+                showToast('Auto-saved draft');
+            }
+        });
+
+        // Auto-save on change
+        function autoSaveHandler() {
+            if(!editor) return;
+            const markdown = editor.getMarkdown();
+            localStorage.setItem('sowDraft', markdown);
+            showToast('Auto-saved draft');
+        }
+
+        // Stakeholder cropping
+        let currentCropper, currentStakeholder, currentImg;
+        document.querySelectorAll('.edit-headshot').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentImg = btn.parentNode.querySelector('img');
+                currentStakeholder = btn.parentNode.dataset.name;
+                const imgEl = document.getElementById('crop-image');
+                imgEl.src = currentImg.src;
+                Micromodal.show('crop-modal');
+                currentCropper = new Cropper(imgEl, { viewMode: 1 });
+            });
+        });
+
+        document.getElementById('save-crop').addEventListener('click', () => {
+            if(!currentCropper) return;
+            currentCropper.getCroppedCanvas().toBlob(blob => {
+                const formData = new FormData();
+                formData.append('file', blob, 'crop.png');
+                formData.append('stakeholder', currentStakeholder);
+                fetch('/images/crop', { method: 'POST', body: formData }).then(() => {
+                    currentImg.src = URL.createObjectURL(blob);
+                    showToast('Crop saved');
+                    Micromodal.close('crop-modal');
+                    currentCropper.destroy();
+                });
+            });
+        });
+
+        document.querySelectorAll('.reset-headshot').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const stakeholder = btn.parentNode.dataset.name;
+                fetch('/images/crop/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stakeholder })
+                }).then(() => {
+                    btn.parentNode.querySelector('img').src = 'https://via.placeholder.com/150';
+                    showToast('Headshot reset');
+                });
+            });
         });
     </script>
 
