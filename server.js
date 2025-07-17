@@ -11,6 +11,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 const { GoogleAuth } = require('google-auth-library');
 const pdf = require('pdf-parse');
+const { mdToPdf } = require('md-to-pdf');
+const PPTX = require('pptxgenjs');
 const { brandContext } = require('./config/brandContext');
 
 // 2. Initialize Express App & Gemini AI
@@ -1031,6 +1033,73 @@ app.post('/upload', async (req, res) => {
     } catch (error) {
         console.error('Error in the SOW generation workflow:', error);
         res.status(500).json({ message: 'An error occurred during the workflow.', error: error.message });
+    }
+});
+
+// --- Export Endpoints ---
+app.post('/export/pdf', async (req, res) => {
+    try {
+        const { markdown } = req.body || {};
+        if (!markdown) {
+            return res.status(400).json({ message: 'No markdown provided' });
+        }
+        const pdfBuf = await mdToPdf({ content: markdown }, {
+            stylesheet: path.join(__dirname, 'templates', 'pdf.css'),
+            as_buffer: true
+        });
+        res.contentType('application/pdf');
+        res.send(pdfBuf.content);
+    } catch (err) {
+        console.error('PDF export error:', err);
+        res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+});
+
+app.post('/export/pptx', async (req, res) => {
+    try {
+        const { markdown } = req.body || {};
+        if (!markdown) {
+            return res.status(400).json({ message: 'No markdown provided' });
+        }
+
+        const slidesMarkdown = markdown.split(/\n---\n/);
+        const pptx = new PPTX();
+        pptx.layout = 'LAYOUT_WIDE';
+
+        slidesMarkdown.forEach((md) => {
+            const slide = pptx.addSlide();
+            const lines = md.split(/\n/);
+            let y = 0.5;
+            lines.forEach(line => {
+                if (/^#+/.test(line)) {
+                    const level = line.match(/^#+/)[0].length;
+                    const text = line.replace(/^#+\s*/, '');
+                    slide.addText(text, { x: 0.5, y, fontSize: level === 1 ? 24 : 20, bold: level === 1 });
+                    y += 0.6;
+                } else if (/^-\s+/.test(line)) {
+                    slide.addText(line.replace(/^-\s+/, ''), { x: 0.8, y, fontSize: 14, bullet: true });
+                    y += 0.3;
+                }
+            });
+
+            if (/stakeholders/i.test(md)) {
+                brandContext.stakeholders.forEach((s, i) => {
+                    const x = 0.5 + (i % 3) * 3;
+                    const yPos = 3 + Math.floor(i / 3) * 2.5;
+                    if (s.imagePath) {
+                        slide.addImage({ path: s.imagePath, x, y: yPos, w: 2, h: 2 });
+                    }
+                    slide.addText(`${s.name}\n${s.title}`, { x, y: yPos + 2, w: 2, fontSize: 10, align: 'center' });
+                });
+            }
+        });
+
+        const buffer = await pptx.write('nodebuffer');
+        res.setHeader('Content-Disposition', 'attachment; filename="sow.pptx"');
+        res.send(buffer);
+    } catch (err) {
+        console.error('PPTX export error:', err);
+        res.status(500).json({ message: 'Failed to generate PPTX' });
     }
 });
 
