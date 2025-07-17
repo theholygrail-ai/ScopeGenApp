@@ -987,6 +987,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
+app.use(express.static(__dirname));
+app.get('/brandcontext', (req, res) => {
+    res.json(brandContext);
+});
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
 app.post('/upload', async (req, res) => {
