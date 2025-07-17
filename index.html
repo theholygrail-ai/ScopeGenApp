@@ -299,9 +299,9 @@
                 mobileToggle.disabled = true;
             } else {
                 currentMd = responsePre.textContent;
+                slidePreview.classList.remove('hidden'); // ensure element is visible before Reveal init
                 buildSlides(currentMd);
                 responsePre.style.display = 'none';
-                slidePreview.classList.remove('hidden');
                 previewButton.textContent = 'Back to Editor';
             }
         });
