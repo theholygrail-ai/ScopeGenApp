@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOW Generator - File Uploader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/reveal.css">
+    <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/black.css">
+    <script src="https://unpkg.com/reveal.js/dist/reveal.js"></script>
+    <script src="https://unpkg.com/reveal.js/plugin/markdown/markdown.js"></script>
     <!-- Basic styling for a cleaner look -->
     <style>
         body {
@@ -154,10 +159,12 @@
                 <button id="copy-button">Copy Markdown</button>
                 <button id="pdf-button" disabled>Download PDF</button>
                 <button id="pptx-button" disabled>Download PPTX</button>
+                <button id="preview-button" disabled>Preview Slides</button>
                 <a href="https://drive.google.com/drive/folders/1FZfowYTtmBif3G8FyGWJA8-MQ_beoRmv" target="_blank" id="branding-assets-button">
                     Get Branding Assets
                 </a>
             </div>
+            <div id="slide-preview" class="hidden mt-4 border rounded p-4"></div>
         </div>
     </div>
 
@@ -169,6 +176,10 @@
         const copyButton = document.getElementById('copy-button');
         const pdfButton = document.getElementById('pdf-button');
         const pptxButton = document.getElementById('pptx-button');
+        const previewButton = document.getElementById('preview-button');
+        const slidePreview = document.getElementById('slide-preview');
+        let brandContext = null;
+        fetch('/brandcontext').then(r => r.json()).then(bc => brandContext = bc);
         // const brandingAssetsButton = document.getElementById('branding-assets-button'); // Not strictly needed for visibility control if parent is handled
 
         form.addEventListener('submit', async (event) => {
@@ -200,12 +211,14 @@
                     copyButton.textContent = 'Copy Markdown'; // Reset button text
                     pdfButton.disabled = false;
                     pptxButton.disabled = false;
+                    previewButton.disabled = false;
                 } else {
                     // Otherwise, display the whole JSON response
                     responsePre.textContent = JSON.stringify(result, null, 2);
                     outputControls.style.display = 'none'; // Ensure controls are hidden if no SOW
                     pdfButton.disabled = true;
                     pptxButton.disabled = true;
+                    previewButton.disabled = true;
                 }
 
 
@@ -216,6 +229,7 @@
                 outputControls.style.display = 'none'; // Ensure controls are hidden on error
                 pdfButton.disabled = true;
                 pptxButton.disabled = true;
+                previewButton.disabled = true;
                 console.error('Upload failed:', error);
             }
         });
@@ -269,6 +283,31 @@
 
         pdfButton.addEventListener('click', () => downloadFile('pdf'));
         pptxButton.addEventListener('click', () => downloadFile('pptx'));
+
+        previewButton.addEventListener('click', () => {
+            const showingPreview = !slidePreview.classList.contains('hidden');
+            if (showingPreview) {
+                slidePreview.classList.add('hidden');
+                responsePre.style.display = 'block';
+                previewButton.textContent = 'Preview Slides';
+            } else {
+                buildSlides(responsePre.textContent);
+                responsePre.style.display = 'none';
+                slidePreview.classList.remove('hidden');
+                previewButton.textContent = 'Back to Editor';
+            }
+        });
+
+        function buildSlides(md) {
+            const chunks = md.split(/\n---\n/);
+            const sections = chunks.map(c => `<section data-markdown><textarea data-template>${c}</textarea></section>`).join('');
+            slidePreview.innerHTML = `<div class="reveal"><div class="slides">${sections}</div></div>`;
+            const deck = new Reveal(slidePreview.querySelector('.reveal'), { plugins: [ RevealMarkdown ], embedded: true });
+            deck.initialize();
+            if (brandContext) {
+                slidePreview.querySelector('.reveal').style.backgroundColor = brandContext.palette.midnightTrade;
+            }
+        }
     </script>
 
 </body>
