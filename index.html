@@ -161,12 +161,14 @@
                 <button id="pdf-button" disabled>Download PDF</button>
                 <button id="pptx-button" disabled>Download PPTX</button>
                 <button id="preview-button" disabled>Preview Slides</button>
+                <button id="gemini-preview-button" disabled>Gemini Preview</button>
                 <button id="mobile-toggle" disabled>Mobile View</button>
                 <a href="https://drive.google.com/drive/folders/1FZfowYTtmBif3G8FyGWJA8-MQ_beoRmv" target="_blank" id="branding-assets-button">
                     Get Branding Assets
                 </a>
             </div>
             <div id="slide-preview" class="hidden mt-4 border rounded p-4"></div>
+            <iframe id="gemini-preview" class="hidden w-full h-[600px] mt-4 border rounded"></iframe>
         </div>
     </div>
 
@@ -179,8 +181,10 @@
         const pdfButton = document.getElementById('pdf-button');
         const pptxButton = document.getElementById('pptx-button');
         const previewButton = document.getElementById('preview-button');
+        const geminiPreviewButton = document.getElementById('gemini-preview-button');
         const mobileToggle = document.getElementById('mobile-toggle');
         const slidePreview = document.getElementById('slide-preview');
+        const geminiPreviewFrame = document.getElementById('gemini-preview');
         let brandContext = null;
         let revealDeck = null;
         let mobileMode = false;
@@ -218,6 +222,7 @@
                     pdfButton.disabled = false;
                     pptxButton.disabled = false;
                     previewButton.disabled = false;
+                    geminiPreviewButton.disabled = false;
                 } else {
                     // Otherwise, display the whole JSON response
                     responsePre.textContent = JSON.stringify(result, null, 2);
@@ -225,6 +230,7 @@
                     pdfButton.disabled = true;
                     pptxButton.disabled = true;
                     previewButton.disabled = true;
+                    geminiPreviewButton.disabled = true;
                 }
 
 
@@ -236,6 +242,7 @@
                 pdfButton.disabled = true;
                 pptxButton.disabled = true;
                 previewButton.disabled = true;
+                geminiPreviewButton.disabled = true;
                 console.error('Upload failed:', error);
             }
         });
@@ -297,12 +304,44 @@
                 responsePre.style.display = 'block';
                 previewButton.textContent = 'Preview Slides';
                 mobileToggle.disabled = true;
+                geminiPreviewFrame.classList.add('hidden');
+                geminiPreviewButton.textContent = 'Gemini Preview';
             } else {
                 currentMd = responsePre.textContent;
                 slidePreview.classList.remove('hidden'); // ensure element is visible before Reveal init
                 buildSlides(currentMd);
                 responsePre.style.display = 'none';
                 previewButton.textContent = 'Back to Editor';
+                geminiPreviewFrame.classList.add('hidden');
+                geminiPreviewButton.textContent = 'Gemini Preview';
+            }
+        });
+
+        geminiPreviewButton.addEventListener('click', async () => {
+            const showing = !geminiPreviewFrame.classList.contains('hidden');
+            if (showing) {
+                geminiPreviewFrame.classList.add('hidden');
+                responsePre.style.display = 'block';
+                geminiPreviewButton.textContent = 'Gemini Preview';
+                return;
+            }
+            geminiPreviewButton.textContent = 'Loading...';
+            try {
+                const resp = await fetch('/gemini-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ markdown: responsePre.textContent })
+                });
+                const result = await resp.json();
+                geminiPreviewFrame.srcdoc = result.html || '';
+                geminiPreviewFrame.classList.remove('hidden');
+                slidePreview.classList.add('hidden');
+                responsePre.style.display = 'none';
+                geminiPreviewButton.textContent = 'Back to Editor';
+            } catch (err) {
+                alert('Gemini preview failed');
+                console.error(err);
+                geminiPreviewButton.textContent = 'Gemini Preview';
             }
         });
 

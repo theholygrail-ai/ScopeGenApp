@@ -26,6 +26,7 @@ if (!geminiApiKey) {
 }
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const geminiProModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
 
 // --- Google Sheets Integration ---
@@ -1104,6 +1105,31 @@ app.post('/export/pptx', async (req, res) => {
     } catch (err) {
         console.error('PPTX export error:', err);
         res.status(500).json({ message: 'Failed to generate PPTX' });
+    }
+});
+
+app.post('/gemini-preview', async (req, res) => {
+    try {
+        const { markdown } = req.body || {};
+        if (!markdown) {
+            return res.status(400).json({ message: 'No markdown provided' });
+        }
+
+        const approxTokens = Math.ceil(markdown.length / 4);
+        const maxOutputTokens = Math.max(256, 8192 - approxTokens);
+
+        const prompt = `Generate a detailed SOW presentation using the following MARKDOWN file and ensure the correct branding is in use for the presentation using the attached branding files as a guide. The SOW must be generated using HTML and Css tailwind in order to be accurate and dynamic. the presentation should also be in slide format.\n\nMARKDOWN:\n${markdown}\n\nBrand Context:${JSON.stringify(brandContext)}`;
+
+        const result = await geminiProModel.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            tools: [{ codeExecution: {} }],
+            generationConfig: { maxOutputTokens }
+        });
+        const html = result.response.text();
+        res.json({ html });
+    } catch (err) {
+        console.error('Gemini preview error:', err);
+        res.status(500).json({ message: 'Failed to generate preview' });
     }
 });
 
