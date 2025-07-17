@@ -11,6 +11,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 const { GoogleAuth } = require('google-auth-library');
 const pdf = require('pdf-parse');
+const { brandContext } = require('./config/brandContext');
 
 // 2. Initialize Express App & Gemini AI
 const app = express();
@@ -215,13 +216,23 @@ async function contextualOverviewAgent(data) {
     ${JSON.stringify(data, null, 2)}
     """
     `;
-    return await generateContentWithRetry(prompt);
+    const raw = await generateContentWithRetry(prompt);
+    const ourRows = brandContext.stakeholders
+        .map(s => `${s.name} | ${s.email} | ${s.title} | ${brandContext.brandName}`)
+        .join('\n');
+
+    const lines = raw.split('\n');
+    const headerIndex = lines.findIndex(l => l.trim().startsWith('Name |'));
+    if (headerIndex !== -1) {
+        lines.splice(headerIndex + 1, 0, ...ourRows.split('\n'));
+    }
+    return lines.join('\n');
 }
 
 /**
  * Agent 1: Project Details Summary
  */
-async function headerAndIntroductionAgent(data) {
+async function headerAndIntroductionAgent(data, brandContext) {
     const prompt = ` You are a project manager preparing a Scope of Work document. Based on the structured JSON data provided, generate the introductory sections of the SOW. The output must be a single Markdown document that strictly follows this three-part structure, with no extra commentary or headings.
 
 PART 1: DOCUMENT HEADER & TITLE
@@ -260,7 +271,7 @@ Compose a letter-style introduction with the following precise structure.
 Greeting & Tagline:
 
 Start with the headline: Hello, ${data.clientEmail || 'client.email@example.com'}
-On the next line, add the italicized tagline: Your eCommerce journey with us is about to begin...
+On the next line, add the italicized tagline: ${brandContext.tagline}
 Opening Paragraph:
 
 Begin with a personal salutation: Hi ${data.clientFirstName || 'there'},
@@ -436,7 +447,7 @@ async function pagesAndTechAgent(data) {
 /**
  * Agent 5: Stakeholders & Purpose
  */
-async function stakeholdersAndPurposeAgent(data) {
+async function stakeholdersAndPurposeAgent(data, brandContext) {
     console.log('[Agent 5: Stakeholders & Purpose] Generating stakeholders and project purpose sections...');
     const prompt = `
     You are a senior project manager writing the strategic overview for a Scope of Work.
@@ -448,10 +459,8 @@ async function stakeholdersAndPurposeAgent(data) {
 
     Generate this section under the main heading \`## 8. Stakeholders\`.
     - The output **must be a clean, pipe-delimited Markdown table** with the exact columns: \`Name | Email | Title | Company\`.
-    - The rows must be grouped and ordered as follows:
-        1.  **eComplete Stakeholders**: List the standard internal team (Cara, Alley, Agnetia, Rayhaan, Sarah, Bradley, Allen).
-        2.  **Client Stakeholders**: Dynamically pull all client-side stakeholders from the BRD.
-        3.  **Third-Party Stakeholders**: Dynamically pull any third-party stakeholders from the BRD.
+    - The table should include only client and third-party stakeholders from the BRD.
+    - eComplete stakeholder rows will be injected separately.
 
     ---
 
@@ -738,10 +747,10 @@ This agent does not call the API; it constructs a static markdown block.
 @param {string} clientName The name of the client for personalizing the prompt.
 @returns {Promise<string>} A promise that resolves to the markdown string.
 */
-async function brandingAndGensparkInstructionsAgent(clientName) {
+async function brandingAndGensparkInstructionsAgent(clientName, brandContext) {
     console.log('[Agent 11: Branding & Genspark Instructions] Generating branding guidelines and prompt...');
     const prompt = `
-Genspark.ai Presentation Generation Instructions Objective: To create a modern, professional, and client-facing SOW presentation that is fully aligned with the eComplete Commerce brand identity.
+Genspark.ai Presentation Generation Instructions Objective: To create a modern, professional, and client-facing SOW presentation that is fully aligned with the ${brandContext.brandName} brand identity.
 Prompt for Genspark.ai: "Generate a slide deck presentation based on the provided Statement of Work markdown for our client, ${clientName}. The presentation must strictly adhere to the following branding and style guidelines.
 
 [cite_start]Overall Tone: The tone should be professional, confident, and clear[cite: 703, 706, 711]. It needs to reflect our position as industry leaders.
@@ -750,13 +759,13 @@ Branding Guidelines:
 
 Primary Colors:
 
-[cite_start]Use #121212 (Midnight Trade) for slide backgrounds[cite: 974, 975]. [cite_start]Use #FFFF00 (Checkout Gold) for all major headings, key icons, and data visualization accents (like progress bars or chart elements)[cite: 978, 979]. Use #FFFFFF (White) for all body text and subheadings to ensure readability against the dark background. [cite_start]Use #A8A8A1 (Retail Stone) for footer text or less important details[cite: 574, 959, 960]. Typography:
+[cite_start]Use ${brandContext.palette.midnightTrade} (Midnight Trade) for slide backgrounds[cite: 974, 975]. [cite_start]Use ${brandContext.palette.checkoutGold} (Checkout Gold) for all major headings, key icons, and data visualization accents (like progress bars or chart elements)[cite: 978, 979]. Use #FFFFFF (White) for all body text and subheadings to ensure readability against the dark background. [cite_start]Use ${brandContext.palette.retailStone} (Retail Stone) for footer text or less important details[cite: 574, 959, 960]. Typography:
 
-[cite_start]Font: Use 'Arial' as the websafe font for all text[cite: 1078, 1083]. [cite_start]Headlines: Must be Bold and in Title Case[cite: 1093]. Use a large font size for impact. [cite_start]Body Text: Must be Regular weight[cite: 1099]. Use a clean, readable font size (e.g., 16-18pt). [cite_start]Alignment: All text must be left-aligned[cite: 1181]. Logo and Tagline:
+[cite_start]Font: Use '${brandContext.fonts.websafe}' as the websafe font for all text[cite: 1078, 1083]. [cite_start]Headlines: Must be Bold and in Title Case[cite: 1093]. Use a large font size for impact. [cite_start]Body Text: Must be Regular weight[cite: 1099]. Use a clean, readable font size (e.g., 16-18pt). [cite_start]Alignment: All text must be ${brandContext.defaultTextAlign || 'left'}-aligned[cite: 1181]. Logo and Tagline:
 
-[cite_start]The eComplete Commerce logo must be placed in the bottom-left corner of every slide[cite: 1495, 1366]. [cite_start]Our tagline, "Connecting what really counts", must be placed in the bottom-right corner of every slide, in 'Retail Stone' (#A8A8A1) color[cite: 629]. Slide Structure and Content:
+[cite_start]The ${brandContext.brandName} logo (found at ${brandContext.logoPaths.singleLogo}) must be placed in the bottom-left corner of every slide[cite: 1495, 1366]. [cite_start]Our tagline, "${brandContext.tagline}", must be placed in the bottom-right corner of every slide, in 'Retail Stone' (${brandContext.palette.retailStone}) color[cite: 629]. Slide Structure and Content:
 
-[cite_start]Title Slide: Must include the client's name ('${clientName}'), the title 'Scope of Work Proposal', the date, and the eComplete Commerce logo[cite: 4, 5, 8]. Content Slides: Break down the markdown sections into individual slides. Use icons, bullet points, and short sentences. Do not use dense paragraphs. [cite_start]Visuals: Use icons to represent services and features[cite: 1200, 1202, 1207, 1208, 1209, 1210, 1211]. [cite_start]Create timelines for project plans [cite: 51] and use simple tables or cards to display data like costs and stakeholders. [cite_start]The visual style should be clean, modern, and geometric[cite: 1190]. [cite_start]Imagery: Select professional, high-quality stock photos that align with our brand's focus on technology, e-commerce, and human connection[cite: 1325, 1327]. [cite_start]Images should have a neutral and positive tone[cite: 1333].
+[cite_start]Title Slide: Must include the client's name ('${clientName}'), the title 'Scope of Work Proposal', the date, and the ${brandContext.brandName} logo[cite: 4, 5, 8]. Content Slides: Break down the markdown sections into individual slides. Use icons, bullet points, and short sentences. Do not use dense paragraphs. [cite_start]Visuals: Use icons to represent services and features[cite: 1200, 1202, 1207, 1208, 1209, 1210, 1211]. [cite_start]Create timelines for project plans [cite: 51] and use simple tables or cards to display data like costs and stakeholders. [cite_start]The visual style should be clean, modern, and geometric[cite: 1190]. [cite_start]Imagery: Select professional, high-quality stock photos that align with our brand's focus on technology, e-commerce, and human connection[cite: 1325, 1327]. [cite_start]Images should have a neutral and positive tone[cite: 1333].
     * **Stakeholders Slide:** For the 'Stakeholders' section, create a grid layout. For each stakeholder, display their name, title, and a circular profile image. The images for the stakeholders can be found in the 'Branding Assets' folder. " `; // We wrap this in a Promise.resolve to maintain consistency with other agents return Promise.resolve(prompt);
 }
 
@@ -905,7 +914,7 @@ async function pricingDataProcessorAgent(pricingData) {
 
 // --- MANAGER AGENT / ORCHESTRATOR ---
 
-async function sowOrchestrator(brdText) {
+async function sowOrchestrator(brdText, brandContext) {
     console.log('--- [SOW Orchestrator] Workflow Started ---');
     const sowSections = {}; // Use an object to store sections by name for clarity
 
@@ -926,7 +935,7 @@ async function sowOrchestrator(brdText) {
     sowSections.projectScope = await projectScopeAgent(structuredData);
 
     console.log('[SOW Orchestrator] Step 2.3: Generating Stakeholders and Purpose...');
-    sowSections.stakeholdersAndPurpose = await stakeholdersAndPurposeAgent(structuredData);
+    sowSections.stakeholdersAndPurpose = await stakeholdersAndPurposeAgent(structuredData, brandContext);
 
     console.log('[SOW Orchestrator] Step 2.4: Generating Dynamic Pricing Packages...');
     sowSections.dynamicPricing = await dynamicPricingPackageAgent(pricingSummary);
@@ -950,7 +959,7 @@ async function sowOrchestrator(brdText) {
     // --- Step 3: Handle Static Agents (No API Call) ---
     // The branding agent does not call the API, so it can be handled separately.
     const clientName = structuredData.ClientProfile?.brandName || 'the Client';
-    sowSections.brandingInstructions = await brandingAndGensparkInstructionsAgent(clientName);
+    sowSections.brandingInstructions = await brandingAndGensparkInstructionsAgent(clientName, brandContext);
 
     // --- Step 4: Assemble the Final Document ---
     console.log('[SOW Orchestrator] All sections generated. Assembling final document...');
@@ -1010,7 +1019,7 @@ app.post('/upload', async (req, res) => {
         }
 
         // The rest of the workflow continues unchanged
-        const finalSowMarkdown = await sowOrchestrator(brdText);
+        const finalSowMarkdown = await sowOrchestrator(brdText, brandContext);
 
         res.status(200).json({
             message: 'SOW generated successfully!',
