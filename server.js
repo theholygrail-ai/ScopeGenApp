@@ -217,16 +217,7 @@ async function contextualOverviewAgent(data) {
     """
     `;
     const raw = await generateContentWithRetry(prompt);
-    const ourRows = brandContext.stakeholders
-        .map(s => `${s.name} | ${s.email} | ${s.title} | ${brandContext.brandName}`)
-        .join('\n');
-
-    const lines = raw.split('\n');
-    const headerIndex = lines.findIndex(l => l.trim().startsWith('Name |'));
-    if (headerIndex !== -1) {
-        lines.splice(headerIndex + 1, 0, ...ourRows.split('\n'));
-    }
-    return lines.join('\n');
+    return raw;
 }
 
 /**
@@ -864,7 +855,17 @@ async function dynamicPricingPackageAgent(pricingSummary) {
     ${JSON.stringify(pricingSummary, null, 2)}
     """
     `;
-    return await generateContentWithRetry(prompt);
+    const raw = await generateContentWithRetry(prompt);
+    const ourRows = brandContext.stakeholders
+        .map(s => `${s.name} | ${s.email} | ${s.title} | ${brandContext.brandName}`)
+        .join('\n');
+
+    const lines = raw.split('\n');
+    const headerIndex = lines.findIndex(l => l.trim().startsWith('Name |'));
+    if (headerIndex !== -1) {
+        lines.splice(headerIndex + 1, 0, ...ourRows.split('\n'));
+    }
+    return lines.join('\n');
 }
 
 /**
