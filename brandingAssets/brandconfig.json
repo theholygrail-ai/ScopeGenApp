@@ -1,0 +1,61 @@
+{
+  "brandName": "eComplete Commerce",
+  "tagline": "Connecting what really counts",
+  "palette": {
+    "digitalTide": "#283638",
+    "retailStone": "#A8A8A1",
+    "cloudCommerce": "#B9F8FF",
+    "midnightTrade": "#121212",
+    "checkoutGold": "#FFFF00"
+  },
+  "fonts": {
+    "primary": "Indivisible",
+    "websafe": "Arial, Helvetica, sans-serif"
+  },
+  "logoPaths": {
+    "singleLogo": "brandingAssets/Logo Branding - Single logo.png",
+    "allLogos": "brandingAssets/Logo Branding- All logos.png"
+  },
+  "imagery": {
+    "brandGuidePdf": "brandingAssets/BrandingGuideDoc/Ecomplete Commerce Brand Guideline 2025.pdf",
+    "colourPalette": "brandingAssets/Branding Colour Pallete.png",
+    "photoStyle": "brandingAssets/Branding Photography style.png",
+    "coreElements": "brandingAssets/Core Brand Elements.png",
+    "powerpointExample": "brandingAssets/Powerpoint Branding Example.png",
+    "stockDir": "brandingAssets/Stock images",
+    "headshotsDir": "brandingAssets/eCompleteSteakholders"
+  },
+  "stakeholders": [
+    {
+      "name": "Dane Matthews",
+      "title": "CTO",
+      "email": "dane.matthews@ecomplete.co.za",
+      "imagePath": "brandingAssets/eCompleteSteakholders/Dane Matthews - CTO.png"
+    },
+    {
+      "name": "Rayhaan Williams",
+      "title": "Head of Digital Marketing",
+      "email": "rayhaan.williams@ecomplete.co.za",
+      "imagePath": "brandingAssets/eCompleteSteakholders/Rayhaan Williams - Head of Digital Marketing.png"
+    },
+    {
+      "name": "Bradley Bryant",
+      "title": "Chief Operating Officer",
+      "email": "bradley@ecomplete.co.za",
+      "imagePath": "brandingAssets/eCompleteSteakholders/Bradley Bryant - Chief Operating Officer.jpeg"
+    },
+    {
+      "name": "Allen Jaffe",
+      "title": "CEO",
+      "email": "allen.jaffe@ecomplete.co.za",
+      "imagePath": "brandingAssets/eCompleteSteakholders/Allen Jaffe - CEO.png"
+    },
+    {
+      "name": "Cara Procter",
+      "title": "Head of Operations",
+      "email": "cara.procter@ecomplete.co.za",
+      "imagePath": "brandingAssets/eCompleteSteakholders/Cara Procter - Head of Operations.png"
+    }
+  ],
+  "defaultTextAlign": "left"
+}
