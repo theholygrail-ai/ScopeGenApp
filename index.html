@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/theme/black.css">
     <script src="https://unpkg.com/reveal.js/dist/reveal.js"></script>
     <script src="https://unpkg.com/reveal.js/plugin/markdown/markdown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Basic styling for a cleaner look -->
     <style>
         body {
@@ -160,6 +161,7 @@
                 <button id="pdf-button" disabled>Download PDF</button>
                 <button id="pptx-button" disabled>Download PPTX</button>
                 <button id="preview-button" disabled>Preview Slides</button>
+                <button id="mobile-toggle" disabled>Mobile View</button>
                 <a href="https://drive.google.com/drive/folders/1FZfowYTtmBif3G8FyGWJA8-MQ_beoRmv" target="_blank" id="branding-assets-button">
                     Get Branding Assets
                 </a>
@@ -177,8 +179,12 @@
         const pdfButton = document.getElementById('pdf-button');
         const pptxButton = document.getElementById('pptx-button');
         const previewButton = document.getElementById('preview-button');
+        const mobileToggle = document.getElementById('mobile-toggle');
         const slidePreview = document.getElementById('slide-preview');
         let brandContext = null;
+        let revealDeck = null;
+        let mobileMode = false;
+        let currentMd = '';
         fetch('/brandcontext').then(r => r.json()).then(bc => brandContext = bc);
         // const brandingAssetsButton = document.getElementById('branding-assets-button'); // Not strictly needed for visibility control if parent is handled
 
@@ -290,23 +296,71 @@
                 slidePreview.classList.add('hidden');
                 responsePre.style.display = 'block';
                 previewButton.textContent = 'Preview Slides';
+                mobileToggle.disabled = true;
             } else {
-                buildSlides(responsePre.textContent);
+                currentMd = responsePre.textContent;
+                buildSlides(currentMd);
                 responsePre.style.display = 'none';
                 slidePreview.classList.remove('hidden');
                 previewButton.textContent = 'Back to Editor';
             }
         });
 
+        mobileToggle.addEventListener('click', () => {
+            if (!mobileMode) {
+                mobileMode = true;
+                mobileToggle.textContent = 'Desktop View';
+                if (revealDeck) revealDeck.destroy();
+                slidePreview.querySelector('.reveal').classList.add('hidden');
+                const mobile = document.createElement('div');
+                mobile.id = 'mobile-container';
+                mobile.className = 'space-y-4 overflow-y-auto max-h-screen';
+                mobile.innerHTML = currentMd.split(/\n---\n/).map(c => `<div class="p-4 border-b">${marked.parse(c)}</div>`).join('');
+                slidePreview.appendChild(mobile);
+            } else {
+                mobileMode = false;
+                mobileToggle.textContent = 'Mobile View';
+                const mobile = document.getElementById('mobile-container');
+                if (mobile) mobile.remove();
+                const revealEl = slidePreview.querySelector('.reveal');
+                revealEl.classList.remove('hidden');
+                revealDeck = new Reveal(revealEl, { plugins: [ RevealMarkdown ], embedded: true });
+                revealDeck.initialize();
+            }
+        });
+
         function buildSlides(md) {
             const chunks = md.split(/\n---\n/);
-            const sections = chunks.map(c => `<section data-markdown><textarea data-template>${c}</textarea></section>`).join('');
-            slidePreview.innerHTML = `<div class="reveal"><div class="slides">${sections}</div></div>`;
-            const deck = new Reveal(slidePreview.querySelector('.reveal'), { plugins: [ RevealMarkdown ], embedded: true });
-            deck.initialize();
+            const sections = [];
+            chunks.forEach(c => {
+                sections.push(`<section data-markdown><textarea data-template>${c}</textarea></section>`);
+                if (brandContext && /##\s*8\.\s*Stakeholders/.test(c)) {
+                    const gridItems = brandContext.stakeholders.map(s => `<div class="text-center"><img class="mx-auto rounded-full h-24 w-24 object-cover" src="${s.imagePath}" alt="${s.name}"><p class="font-bold mt-2">${s.name}</p><p class="text-sm">${s.title}</p></div>`).join('');
+                    sections.push(`<section><div class="grid grid-cols-2 md:grid-cols-3 gap-4">${gridItems}</div></section>`);
+                }
+            });
+            const overlay = brandContext ? `<div id="branding-overlay" class="fixed top-2 left-2 flex items-center space-x-2 pointer-events-none z-50"><img src="${brandContext.logoPaths.singleLogo}" class="h-8 w-auto"/><span class="text-white text-sm font-bold">${brandContext.tagline}</span></div>` : '';
+            slidePreview.innerHTML = `<div class="reveal">${overlay}<div class="slides">${sections.join('')}</div></div>`;
+            revealDeck = new Reveal(slidePreview.querySelector('.reveal'), { plugins: [ RevealMarkdown ], embedded: true });
+            revealDeck.initialize();
             if (brandContext) {
-                slidePreview.querySelector('.reveal').style.backgroundColor = brandContext.palette.midnightTrade;
+                const revealEl = slidePreview.querySelector('.reveal');
+                revealEl.style.backgroundColor = brandContext.palette.midnightTrade;
+                const existing = document.getElementById('reveal-brand-font');
+                if (existing) existing.remove();
+                const style = document.createElement('style');
+                style.id = 'reveal-brand-font';
+                style.textContent = `.reveal, .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 { font-family: ${brandContext.fonts.websafe}; }`;
+                document.head.appendChild(style);
+                if (brandContext.fonts.primary.toLowerCase() === 'indivisible') {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = 'https://fonts.googleapis.com/css2?family=Indivisible:wght@400;700&display=swap';
+                    document.head.appendChild(link);
+                }
             }
+            mobileToggle.disabled = false;
+            mobileToggle.textContent = 'Mobile View';
         }
     </script>
 
