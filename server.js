@@ -25,7 +25,7 @@ if (!geminiApiKey) {
     process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(geminiApiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 
 // --- Google Sheets Integration ---
