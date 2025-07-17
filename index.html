@@ -89,6 +89,19 @@
         #copy-button:hover {
             background-color: #3f51b5;
         }
+        #pdf-button, #pptx-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            color: #fff;
+            background-color: #43a047;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        #pdf-button:hover, #pptx-button:hover {
+            background-color: #2e7d32;
+        }
         #response {
             margin-top: 0.5rem;
             padding: 1rem;
@@ -139,6 +152,8 @@
             <pre id="response"></pre> <!-- Using <pre> for better formatting -->
             <div id="output-controls" style="display: none; margin-top: 15px;">
                 <button id="copy-button">Copy Markdown</button>
+                <button id="pdf-button" disabled>Download PDF</button>
+                <button id="pptx-button" disabled>Download PPTX</button>
                 <a href="https://drive.google.com/drive/folders/1FZfowYTtmBif3G8FyGWJA8-MQ_beoRmv" target="_blank" id="branding-assets-button">
                     Get Branding Assets
                 </a>
@@ -152,6 +167,8 @@
         const responsePre = document.getElementById('response');
         const outputControls = document.getElementById('output-controls'); // Get the new div
         const copyButton = document.getElementById('copy-button');
+        const pdfButton = document.getElementById('pdf-button');
+        const pptxButton = document.getElementById('pptx-button');
         // const brandingAssetsButton = document.getElementById('branding-assets-button'); // Not strictly needed for visibility control if parent is handled
 
         form.addEventListener('submit', async (event) => {
@@ -181,10 +198,14 @@
                     responsePre.textContent = result.fullSow;
                     outputControls.style.display = 'block'; // Show output controls div
                     copyButton.textContent = 'Copy Markdown'; // Reset button text
+                    pdfButton.disabled = false;
+                    pptxButton.disabled = false;
                 } else {
                     // Otherwise, display the whole JSON response
                     responsePre.textContent = JSON.stringify(result, null, 2);
                     outputControls.style.display = 'none'; // Ensure controls are hidden if no SOW
+                    pdfButton.disabled = true;
+                    pptxButton.disabled = true;
                 }
 
 
@@ -193,6 +214,8 @@
                 responsePre.style.color = '#c62828';
                 responsePre.textContent = 'Error: Could not connect to the server. Is it running?';
                 outputControls.style.display = 'none'; // Ensure controls are hidden on error
+                pdfButton.disabled = true;
+                pptxButton.disabled = true;
                 console.error('Upload failed:', error);
             }
         });
@@ -214,6 +237,38 @@
                 copyButton.textContent = 'Copy Markdown';
             }, 2000);
         });
+
+        async function downloadFile(format) {
+            const button = format === 'pdf' ? pdfButton : pptxButton;
+            button.textContent = 'Downloading...';
+            button.disabled = true;
+            try {
+                const response = await fetch(`/export/${format}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ markdown: responsePre.textContent })
+                });
+                if (!response.ok) throw new Error('Export failed');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = format === 'pdf' ? 'sow.pdf' : 'sow.pptx';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                alert('Export failed');
+                console.error(err);
+            } finally {
+                button.textContent = format === 'pdf' ? 'Download PDF' : 'Download PPTX';
+                button.disabled = false;
+            }
+        }
+
+        pdfButton.addEventListener('click', () => downloadFile('pdf'));
+        pptxButton.addEventListener('click', () => downloadFile('pptx'));
     </script>
 
 </body>
