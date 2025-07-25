@@ -1085,6 +1085,46 @@ app.get('/ps/tasks/:runId/:taskId', async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/**
+ * POST /ps/runs
+ * Body: { workflowId: string, name: string, dueDate?: string }
+ * Creates a new workflow run and returns its ID.
+ */
+app.post('/ps/runs', async (req, res) => {
+  const { workflowId, name, dueDate } = req.body;
+  if (!workflowId || !name) {
+    return res.status(400).json({ error: 'workflowId and name are required' });
+  }
+
+  const url = `${PS_BASE_URL}/workflow-runs`;
+  const payload = { workflowId, name };
+  if (dueDate) payload.dueDate = dueDate;
+
+  try {
+    const psRes = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-API-Key': PS_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (psRes.status === 401) return res.status(401).json({ error: 'Unauthorized' });
+    if (psRes.status === 400) {
+      const text = await psRes.text();
+      return res.status(400).json({ error: text });
+    }
+    if (!psRes.ok) return res.status(psRes.status).json({ error: psRes.statusText });
+
+    const { id } = await psRes.json();
+    return res.status(201).json({ runId: id });
+  } catch (err) {
+    console.error('❌ Error creating workflow run:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
 app.post('/upload', async (req, res) => {
