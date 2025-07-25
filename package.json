@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js"
+    "test": "node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js && node tests/psCreateRunRoute.test.js"
   },
   "author": "",
   "license": "ISC",
