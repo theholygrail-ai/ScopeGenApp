@@ -151,10 +151,20 @@
             <label for="templateIdInput" class="block text-sm font-medium text-gray-700">Workflow Template ID</label>
             <input id="templateIdInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter workflow template ID">
         </div>
-        <button id="loadRunsBtn" class="px-4 py-2 bg-indigo-600 text-white rounded">Load Runs</button>
-        <select id="runsSelect" class="mt-2 block w-full border rounded p-2 hidden">
-          <option value="">Select a run…</option>
-        </select>
+        <div class="mb-4">
+          <button id="loadRunsBtn" class="px-4 py-2 bg-indigo-600 text-white rounded">Load Runs</button>
+        </div>
+        <table id="runsTable" class="hidden w-full mb-6 border">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-2 py-1 text-left">Name</th>
+              <th class="px-2 py-1 text-left">Updated</th>
+              <th class="px-2 py-1 text-left">Run ID</th>
+              <th class="px-2 py-1 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
         <div class="mb-4">
             <label for="runNameInput" class="block text-sm font-medium text-gray-700">New Run Name</label>
             <input id="runNameInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter run name">
@@ -216,7 +226,8 @@
         const runNameInput = document.getElementById('runNameInput');
         const createRunBtn = document.getElementById('createRunBtn');
         const loadRunsBtn = document.getElementById('loadRunsBtn');
-        const runsSelect   = document.getElementById('runsSelect');
+        const runsTableBody = document.querySelector('#runsTable tbody');
+        const runsTable     = document.getElementById('runsTable');
         let brandContext = null;
         let revealDeck = null;
         let mobileMode = false;
@@ -227,28 +238,47 @@
         loadRunsBtn.addEventListener('click', async () => {
           const templateId = templateIdInput.value.trim();
           if (!templateId) return alert('Enter a Workflow Template ID first');
+
           try {
             const res = await fetch(`/ps/runs?workflowId=${encodeURIComponent(templateId)}`);
             if (!res.ok) throw new Error(await res.text());
             const runs = await res.json();
-            runsSelect.innerHTML = '<option value="">Select a run…</option>';
+
+            runsTableBody.innerHTML = '';
             runs.forEach(r => {
-              const opt = document.createElement('option');
-              opt.value = r.id;
-              opt.textContent = `${r.name}\u00A0\u2013\u00A0${new Date(r.updatedDate).toLocaleDateString()}`;
-              runsSelect.appendChild(opt);
+              const tr = document.createElement('tr');
+              tr.classList.add('border-t');
+
+              const updated = new Date(r.updatedDate).toLocaleDateString();
+              tr.innerHTML = `
+                <td class="px-2 py-1">${r.name}</td>
+                <td class="px-2 py-1">${updated}</td>
+                <td class="px-2 py-1 font-mono text-sm">${r.id}</td>
+                <td class="px-2 py-1 space-x-2">
+                  <button data-id="${r.id}" class="selectRunBtn px-2 py-1 bg-blue-500 text-white rounded text-xs">Select</button>
+                  <button data-id="${r.id}" class="copyRunBtn px-2 py-1 bg-gray-300 text-gray-800 rounded text-xs">Copy ID</button>
+                </td>`;
+              runsTableBody.appendChild(tr);
             });
-            runsSelect.classList.remove('hidden');
+
+            runsTable.classList.remove('hidden');
           } catch (e) {
             console.error(e);
             alert('Failed to load runs.');
           }
         });
 
-        runsSelect.addEventListener('change', () => {
-          const runId = runsSelect.value;
-          runIdInput.value = runId;
-          if (runId) loadTasksBtn.click();
+        runsTable.addEventListener('click', (e) => {
+          const id = e.target.dataset.id;
+          if (e.target.classList.contains('selectRunBtn')) {
+            runIdInput.value = id;
+            loadTasksBtn.click();
+          }
+          if (e.target.classList.contains('copyRunBtn')) {
+            navigator.clipboard.writeText(id)
+              .then(() => alert('Run ID copied!'))
+              .catch(() => alert('Copy failed'));
+          }
         });
 
         createRunBtn.addEventListener('click', async () => {
