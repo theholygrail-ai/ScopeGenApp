@@ -1027,6 +1027,57 @@ app.get('/ps/tasks/:runId', async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/**
+ * GET /ps/tasks/:runId/:taskId
+ * Fetches one task's form-field values and returns them as Markdown.
+ */
+app.get('/ps/tasks/:runId/:taskId', async (req, res) => {
+  const { runId, taskId } = req.params;
+
+  const taskUrl = `${PS_BASE_URL}/workflow-runs/${runId}/tasks/${taskId}`;
+  const fieldsUrl = `${PS_BASE_URL}/workflow-runs/${runId}/tasks/${taskId}/form-fields`;
+
+  try {
+    // 1) Verify task exists
+    const taskRes = await fetch(taskUrl, {
+      headers: { 'X-API-Key': PS_API_KEY }
+    });
+    if (taskRes.status === 401)   return res.status(401).json({ error: 'Unauthorized' });
+    if (taskRes.status === 404)   return res.status(404).json({ error: 'Task not found' });
+    if (!taskRes.ok)              return res.status(taskRes.status).json({ error: taskRes.statusText });
+
+    // 2) Fetch all form-field values (handle simple pagination)
+    let allFields = [];
+    let href = `${fieldsUrl}?_`;
+    while (href) {
+      const fieldsRes = await fetch(href, {
+        headers: { 'X-API-Key': PS_API_KEY }
+      });
+      if (!fieldsRes.ok) {
+        return res.status(fieldsRes.status).json({ error: fieldsRes.statusText });
+      }
+      const { fields, links } = await fieldsRes.json();
+      allFields = allFields.concat(fields);
+      const nextLink = links.find(l => l.rel === 'next');
+      href = nextLink ? nextLink.href : null;
+    }
+
+    // 3) Convert to Markdown
+    const md = allFields.map(f => {
+      const label = f.label || f.key;
+      const data  = f.data;
+      const val = Array.isArray(data) ? data.join(', ') : String(data);
+      return `**${label}:** ${val}`;
+    }).join('\n\n');
+
+    return res.type('text/markdown').send(md);
+
+  } catch (err) {
+    console.error('\u274c Error fetching task fields:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
 app.post('/upload', async (req, res) => {
