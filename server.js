@@ -7,6 +7,13 @@ const cors = require('cors');
 const path = require('path');
 const mammoth = require('mammoth');
 require('dotenv').config();
+const fetch = (...args) => global.fetch(...args);
+const PS_API_KEY = process.env.PS_API_KEY;
+const PS_BASE_URL = 'https://public-api.process.st/api/v1.1';
+if (!PS_API_KEY) {
+  console.error('PS_API_KEY is not set in .env');
+  process.exit(1);
+}
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 const { GoogleAuth } = require('google-auth-library');
@@ -991,6 +998,35 @@ app.use(express.static(__dirname));
 app.get('/brandcontext', (req, res) => {
     res.json(brandContext);
 });
+/**
+ * GET /ps/tasks/:runId
+ * Returns all tasks for the given workflow run, sorted newest first.
+ */
+app.get('/ps/tasks/:runId', async (req, res) => {
+  const { runId } = req.params;
+  const url = `${PS_BASE_URL}/workflow-runs/${runId}/tasks?sort=created_at.desc`;
+  try {
+    const psResponse = await fetch(url, {
+      headers: {
+        'X-API-Key': PS_API_KEY
+      }
+    });
+    if (psResponse.status === 401) {
+      return res.status(401).json({ error: 'Unauthorized: invalid or missing API key' });
+    }
+    if (psResponse.status === 404) {
+      return res.status(404).json({ error: `Workflow run ${runId} not found` });
+    }
+    if (!psResponse.ok) {
+      return res.status(psResponse.status).json({ error: psResponse.statusText });
+    }
+    const body = await psResponse.json();
+    return res.json(body.tasks);
+  } catch (err) {
+    console.error('Error fetching Process Street tasks:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
 app.post('/upload', async (req, res) => {
@@ -1108,7 +1144,11 @@ app.post('/export/pptx', async (req, res) => {
 });
 
 // --- Start the Server ---
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-    console.log('Workflow updated with Costing & Estimates agent.');
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+        console.log('Workflow updated with Costing & Estimates agent.');
+    });
+}
+
+module.exports = app;
