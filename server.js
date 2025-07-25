@@ -1087,6 +1087,26 @@ app.get('/ps/tasks/:runId/:taskId', async (req, res) => {
 });
 
 /**
+ * GET /ps/runs?workflowId=<templateId>
+ * Returns up to 200 latest runs for that workflow template.
+ */
+app.get('/ps/runs', async (req, res) => {
+  const { workflowId } = req.query;
+  if (!workflowId) return res.status(400).json({ error: 'workflowId is required' });
+
+  const url = `${PS_BASE_URL}/workflow-runs?workflowId=${encodeURIComponent(workflowId)}`;
+  try {
+    const psRes = await fetch(url, { headers: { 'X-API-Key': PS_API_KEY } });
+    if (!psRes.ok) return res.status(psRes.status).json({ error: psRes.statusText });
+    const { workflowRuns } = await psRes.json();
+    return res.json(workflowRuns);
+  } catch (err) {
+    console.error('❌ Error listing workflow runs:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * POST /ps/runs
  * Body: { workflowId: string, name: string, dueDate?: string }
  * Creates a new workflow run and returns its ID.

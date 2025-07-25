@@ -151,6 +151,10 @@
             <label for="templateIdInput" class="block text-sm font-medium text-gray-700">Workflow Template ID</label>
             <input id="templateIdInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter workflow template ID">
         </div>
+        <button id="loadRunsBtn" class="px-4 py-2 bg-indigo-600 text-white rounded">Load Runs</button>
+        <select id="runsSelect" class="mt-2 block w-full border rounded p-2 hidden">
+          <option value="">Select a run…</option>
+        </select>
         <div class="mb-4">
             <label for="runNameInput" class="block text-sm font-medium text-gray-700">New Run Name</label>
             <input id="runNameInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter run name">
@@ -211,12 +215,41 @@
         const templateIdInput = document.getElementById('templateIdInput');
         const runNameInput = document.getElementById('runNameInput');
         const createRunBtn = document.getElementById('createRunBtn');
+        const loadRunsBtn = document.getElementById('loadRunsBtn');
+        const runsSelect   = document.getElementById('runsSelect');
         let brandContext = null;
         let revealDeck = null;
         let mobileMode = false;
         let currentMd = '';
         fetch('/brandcontext').then(r => r.json()).then(bc => brandContext = bc);
         // const brandingAssetsButton = document.getElementById('branding-assets-button'); // Not strictly needed for visibility control if parent is handled
+
+        loadRunsBtn.addEventListener('click', async () => {
+          const templateId = templateIdInput.value.trim();
+          if (!templateId) return alert('Enter a Workflow Template ID first');
+          try {
+            const res = await fetch(`/ps/runs?workflowId=${encodeURIComponent(templateId)}`);
+            if (!res.ok) throw new Error(await res.text());
+            const runs = await res.json();
+            runsSelect.innerHTML = '<option value="">Select a run…</option>';
+            runs.forEach(r => {
+              const opt = document.createElement('option');
+              opt.value = r.id;
+              opt.textContent = `${r.name}\u00A0\u2013\u00A0${new Date(r.updatedDate).toLocaleDateString()}`;
+              runsSelect.appendChild(opt);
+            });
+            runsSelect.classList.remove('hidden');
+          } catch (e) {
+            console.error(e);
+            alert('Failed to load runs.');
+          }
+        });
+
+        runsSelect.addEventListener('change', () => {
+          const runId = runsSelect.value;
+          runIdInput.value = runId;
+          if (runId) loadTasksBtn.click();
+        });
 
         createRunBtn.addEventListener('click', async () => {
             const workflowId = templateIdInput.value.trim();
