@@ -148,6 +148,15 @@
     <div class="container">
         <h1>Upload BRD Document</h1>
         <div class="mb-4">
+            <label for="templateIdInput" class="block text-sm font-medium text-gray-700">Workflow Template ID</label>
+            <input id="templateIdInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter workflow template ID">
+        </div>
+        <div class="mb-4">
+            <label for="runNameInput" class="block text-sm font-medium text-gray-700">New Run Name</label>
+            <input id="runNameInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter run name">
+        </div>
+        <button id="createRunBtn" class="mb-6 px-4 py-2 bg-green-600 text-white rounded">Create New Run</button>
+        <div class="mb-4">
             <label for="runIdInput" class="block text-sm font-medium text-gray-700">Process Street Run ID</label>
             <input id="runIdInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter runId">
             <button id="loadTasksBtn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded">Load Tasks</button>
@@ -199,12 +208,45 @@
         const loadTasksBtn = document.getElementById('loadTasksBtn');
         const tasksContainer = document.getElementById('tasksContainer');
         const tasksTable = document.getElementById('tasksTable');
+        const templateIdInput = document.getElementById('templateIdInput');
+        const runNameInput = document.getElementById('runNameInput');
+        const createRunBtn = document.getElementById('createRunBtn');
         let brandContext = null;
         let revealDeck = null;
         let mobileMode = false;
         let currentMd = '';
         fetch('/brandcontext').then(r => r.json()).then(bc => brandContext = bc);
         // const brandingAssetsButton = document.getElementById('branding-assets-button'); // Not strictly needed for visibility control if parent is handled
+
+        createRunBtn.addEventListener('click', async () => {
+            const workflowId = templateIdInput.value.trim();
+            const name = runNameInput.value.trim();
+            if (!workflowId || !name) {
+                return alert('Please enter both Workflow Template ID and Run Name.');
+            }
+
+            try {
+                const res = await fetch('/ps/runs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workflowId, name })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    return alert(`Error creating run: ${err.error}`);
+                }
+
+                const { runId } = await res.json();
+                runIdInput.value = runId;
+                alert(`Workflow run created: ${runId}`);
+                loadTasksBtn.click();
+
+            } catch (e) {
+                console.error(e);
+                alert('Failed to create workflow run.');
+            }
+        });
 
         loadTasksBtn.addEventListener('click', async () => {
             const runId = runIdInput.value.trim();
