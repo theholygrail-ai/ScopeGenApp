@@ -1004,26 +1004,33 @@ app.get('/brandcontext', (req, res) => {
  */
 app.get('/ps/tasks/:runId', async (req, res) => {
   const { runId } = req.params;
-  const url = `${PS_BASE_URL}/workflow-runs/${runId}/tasks?sort=created_at.desc`;
+  // start with first page, sorted newest first
+  let nextHref = `${PS_BASE_URL}/workflow-runs/${runId}/tasks?sort=created_at.desc`;
+  const allTasks = [];
   try {
-    const psResponse = await fetch(url, {
-      headers: {
-        'X-API-Key': PS_API_KEY
-      }
-    });
-    if (psResponse.status === 401) {
-      return res.status(401).json({ error: 'Unauthorized: invalid or missing API key' });
+    // Loop through pages
+    while (nextHref) {
+      const pageRes = await fetch(nextHref, {
+        headers: { 'X-API-Key': PS_API_KEY }
+      });
+
+      if (pageRes.status === 401)   return res.status(401).json({ error: 'Unauthorized' });
+      if (pageRes.status === 404)   return res.status(404).json({ error: `Workflow run ${runId} not found` });
+      if (!pageRes.ok)              return res.status(pageRes.status).json({ error: pageRes.statusText });
+
+      const { tasks, links } = await pageRes.json();
+      allTasks.push(...tasks);
+
+      // find next page link
+      const nextLink = links.find(l => l.rel === 'next');
+      nextHref = nextLink ? nextLink.href : null;
     }
-    if (psResponse.status === 404) {
-      return res.status(404).json({ error: `Workflow run ${runId} not found` });
-    }
-    if (!psResponse.ok) {
-      return res.status(psResponse.status).json({ error: psResponse.statusText });
-    }
-    const body = await psResponse.json();
-    return res.json(body.tasks);
+
+    // Return the full list
+    return res.json(allTasks);
+
   } catch (err) {
-    console.error('Error fetching Process Street tasks:', err);
+    console.error('❌ Error fetching Process Street tasks:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
