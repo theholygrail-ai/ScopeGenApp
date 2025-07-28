@@ -9,3 +9,20 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+export async function uploadBRDFile(file: any) {
+  const formData = new FormData();
+  formData.append('brdFile', {
+    uri: file.uri,
+    name: file.name,
+    type: file.mimeType || 'application/octet-stream',
+  } as any);
+
+  const response = await api.post('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return response.data;
+}
