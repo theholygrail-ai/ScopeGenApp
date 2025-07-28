@@ -15,19 +15,31 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 2rem 0;
             background-color: #f4f7f6;
             color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        .container {
+        .dashboard {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .card {
             background: #ffffff;
-            padding: 2rem 3rem;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            width: 90%;
-            max-width: 600px; /* Increased width for better viewing */
-            margin: 0 auto;
+            padding: 1.5rem;
         }
         h1 {
             color: #1a237e;
@@ -108,12 +120,6 @@
         }
         #response {
             margin-top: 0.5rem;
-            padding: 1rem;
-            border-radius: 8px;
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            word-wrap: break-word;
-            text-align: left;
             white-space: pre-wrap; /* Respects newlines in the text */
             max-height: 40vh; /* Limits the height */
             overflow-y: auto; /* Adds a scrollbar if content overflows */
@@ -142,9 +148,12 @@
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <h1>Upload BRD Document</h1>
+    <header class="bg-gray-800 text-white py-3 px-6">
+        <h1 class="text-lg font-semibold">SOW Generator Console</h1>
+    </header>
+    <main class="dashboard">
+        <div class="card">
+            <h1 class="text-xl font-semibold mb-4">Upload BRD Document</h1>
         <div class="mb-4">
             <label for="templateIdInput" class="block text-sm font-medium text-gray-700">Workflow Template ID</label>
             <input id="templateIdInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter workflow template ID" value="qtpZ3UaoZnwMF3frK9tJeg">
@@ -191,10 +200,10 @@
         </form>
 
         <!-- This area contains the response and the copy button -->
-        <div id="response-area" style="display: none;">
-            <h3>Server Response:</h3>
-            <pre id="response"></pre> <!-- Using <pre> for better formatting -->
-            <div id="output-controls" style="display: none; margin-top: 15px;">
+        <div id="response-area" class="card bg-gray-900 text-green-400 hidden">
+            <h3 class="text-white mb-2">Server Response:</h3>
+            <pre id="response" class="bg-gray-800 p-2 rounded text-green-300 overflow-auto max-h-60"></pre>
+            <div id="output-controls" class="mt-4 space-x-2 hidden">
                 <button id="copy-button">Copy Markdown</button>
                 <button id="pdf-button" disabled>Download PDF</button>
                 <button id="pptx-button" disabled>Download PPTX</button>
@@ -204,9 +213,10 @@
                     Get Branding Assets
                 </a>
             </div>
-            <div id="slide-preview" class="hidden mt-4 border rounded p-4"></div>
+            <div id="slide-preview" class="hidden mt-4 border rounded p-4 bg-gray-800"></div>
+
         </div>
-    </div>
+    </main>
 
     <script>
         const form = document.getElementById('uploadForm');
