@@ -1,9 +1,10 @@
-import { Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg font-bold text-blue-600">🚀 SOW Generator App</Text>
-    </View>
+    <SafeAreaView className="flex-1 bg-white">
+      <RootNavigator />
+    </SafeAreaView>
   );
 }
