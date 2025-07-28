@@ -14,11 +14,8 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
+            padding: 2rem 0;
             background-color: #f4f7f6;
             color: #333;
         }
@@ -30,6 +27,7 @@
             text-align: center;
             width: 90%;
             max-width: 600px; /* Increased width for better viewing */
+            margin: 0 auto;
         }
         h1 {
             color: #1a237e;
@@ -154,22 +152,25 @@
         <div class="mb-4">
           <button id="loadRunsBtn" class="px-4 py-2 bg-indigo-600 text-white rounded">Load BRD List</button>
         </div>
-        <table id="runsTable" class="hidden w-full mb-6 border">
-          <thead class="bg-gray-100">
-            <tr>
-              <th class="px-2 py-1 text-left">Name</th>
-              <th class="px-2 py-1 text-left">Updated</th>
-              <th class="px-2 py-1 text-left">Run ID</th>
-              <th class="px-2 py-1 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="mb-4">
-            <label for="runNameInput" class="block text-sm font-medium text-gray-700">New Run Name</label>
-            <input id="runNameInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter run name">
+        <div id="runsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+          <div class="bg-white p-4 rounded shadow max-h-[80vh] overflow-y-auto w-full max-w-xl">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="text-lg font-semibold">BRD Runs</h2>
+              <button id="closeRunsModal" class="text-xl">&times;</button>
+            </div>
+            <table id="runsTable" class="w-full mb-2 border">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-2 py-1 text-left">Name</th>
+                  <th class="px-2 py-1 text-left">Updated</th>
+                  <th class="px-2 py-1 text-left">Run ID</th>
+                  <th class="px-2 py-1 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
-        <button id="createRunBtn" class="mb-6 px-4 py-2 bg-green-600 text-white rounded">Create New Run</button>
         <div class="mb-4">
             <label for="runIdInput" class="block text-sm font-medium text-gray-700">Process Street Run ID</label>
             <input id="runIdInput" type="text" class="mt-1 block w-full border rounded p-2" placeholder="Enter runId">
@@ -223,11 +224,11 @@
         const tasksContainer = document.getElementById('tasksContainer');
         const tasksTable = document.getElementById('tasksTable');
         const templateIdInput = document.getElementById('templateIdInput');
-        const runNameInput = document.getElementById('runNameInput');
-        const createRunBtn = document.getElementById('createRunBtn');
         const loadRunsBtn = document.getElementById('loadRunsBtn');
         const runsTableBody = document.querySelector('#runsTable tbody');
         const runsTable     = document.getElementById('runsTable');
+        const runsModal     = document.getElementById('runsModal');
+        const closeRunsModal = document.getElementById('closeRunsModal');
         let brandContext = null;
         let revealDeck = null;
         let mobileMode = false;
@@ -261,7 +262,7 @@
               runsTableBody.appendChild(tr);
             });
 
-            runsTable.classList.remove('hidden');
+            runsModal.classList.remove('hidden');
           } catch (e) {
             console.error(e);
             alert('Failed to load runs.');
@@ -273,6 +274,7 @@
           if (e.target.classList.contains('selectRunBtn')) {
             runIdInput.value = id;
             loadTasksBtn.click();
+            runsModal.classList.add('hidden');
           }
           if (e.target.classList.contains('copyRunBtn')) {
             navigator.clipboard.writeText(id)
@@ -281,35 +283,10 @@
           }
         });
 
-        createRunBtn.addEventListener('click', async () => {
-            const workflowId = templateIdInput.value.trim();
-            const name = runNameInput.value.trim();
-            if (!workflowId || !name) {
-                return alert('Please enter both Workflow Template ID and Run Name.');
-            }
-
-            try {
-                const res = await fetch('/ps/runs', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ workflowId, name })
-                });
-
-                if (!res.ok) {
-                    const err = await res.json();
-                    return alert(`Error creating run: ${err.error}`);
-                }
-
-                const { runId } = await res.json();
-                runIdInput.value = runId;
-                alert(`Workflow run created: ${runId}`);
-                loadTasksBtn.click();
-
-            } catch (e) {
-                console.error(e);
-                alert('Failed to create workflow run.');
-            }
+        closeRunsModal.addEventListener('click', () => {
+          runsModal.classList.add('hidden');
         });
+
 
         loadTasksBtn.addEventListener('click', async () => {
             const runId = runIdInput.value.trim();
