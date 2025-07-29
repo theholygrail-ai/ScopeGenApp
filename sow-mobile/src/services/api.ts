@@ -4,7 +4,7 @@ const API_BASE_URL = 'http://localhost:8000'; // Replace with your actual IP if 
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 180000,
+  timeout: 600000,
   headers: {
     'Content-Type': 'application/json',
   },
