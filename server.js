@@ -36,50 +36,55 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 
 // --- Google Sheets Integration ---
-async function getPricingSheetData() {
-    try {
-        console.log('[Data Ingestion] Authenticating with Google Sheets...');
-        const auth = new GoogleAuth({
-            keyFile: 'credentials.json',
-            scopes: 'https://www.googleapis.com/auth/spreadsheets',
-        });
+async function getPricingSheetData(retries = 3) {
+    console.log('[Data Ingestion] Authenticating with Google Sheets...');
+    const auth = new GoogleAuth({
+        keyFile: 'credentials.json',
+        scopes: 'https://www.googleapis.com/auth/spreadsheets',
+    });
 
-        const client = await auth.getClient();
-        const googleSheets = google.sheets({ version: 'v4', auth: client });
+    const client = await auth.getClient();
+    const googleSheets = google.sheets({ version: 'v4', auth: client });
 
-        const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-        const sheetName = process.env.GOOGLE_SHEET_NAME; // Re-introduce the specific sheet name
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    const sheetName = process.env.GOOGLE_SHEET_NAME; // Re-introduce the specific sheet name
 
-        if (!spreadsheetId || !sheetName) {
-            throw new Error("Both GOOGLE_SHEET_ID and GOOGLE_SHEET_NAME must be set in the .env file.");
+    if (!spreadsheetId || !sheetName) {
+        throw new Error("Both GOOGLE_SHEET_ID and GOOGLE_SHEET_NAME must be set in the .env file.");
+    }
+
+    console.log(`[Data Ingestion] Fetching data from specific sheet: "${sheetName}"...`);
+
+    for (let i = 0; i < retries; i++) {
+        try {
+            const rows = await googleSheets.spreadsheets.values.get({
+                auth,
+                spreadsheetId,
+                range: sheetName, // Target the specific sheet name directly
+            });
+
+            const pricingData = rows.data.values;
+            if (!pricingData || pricingData.length === 0) {
+                console.warn(`[Data Ingestion] No data found in sheet: "${sheetName}".`);
+                return [];
+            }
+
+            console.log(`[Data Ingestion] Successfully fetched ${pricingData.length} rows from "${sheetName}".`);
+            return pricingData;
+        } catch (error) {
+            console.warn(`Sheets API attempt ${i + 1} failed.`, error.message);
+            if (i === retries - 1) {
+                console.error("Error fetching Google Sheet data:", error.message);
+                if (error.code === 400) {
+                    console.error(`This might mean the sheet name "${process.env.GOOGLE_SHEET_NAME}" is incorrect or does not exist in the spreadsheet.`);
+                } else if (error.code === 404) {
+                    console.error(`This might mean the spreadsheet ID "${process.env.GOOGLE_SHEET_ID}" is incorrect.`);
+                }
+                console.error("Please ensure 'credentials.json' exists and the GOOGLE_SHEET_ID/GOOGLE_SHEET_NAME are correct in .env.");
+                throw new Error("Could not fetch pricing data from Google Sheets.");
+            }
+            await new Promise(res => setTimeout(res, 1500));
         }
-
-        console.log(`[Data Ingestion] Fetching data from specific sheet: "${sheetName}"...`);
-
-        const rows = await googleSheets.spreadsheets.values.get({
-            auth,
-            spreadsheetId,
-            range: sheetName, // Target the specific sheet name directly
-        });
-
-        const pricingData = rows.data.values;
-        if (!pricingData || pricingData.length === 0) {
-            console.warn(`[Data Ingestion] No data found in sheet: "${sheetName}".`);
-            return [];
-        }
-
-        console.log(`[Data Ingestion] Successfully fetched ${pricingData.length} rows from "${sheetName}".`);
-        return pricingData;
-
-    } catch (error) {
-        console.error("Error fetching Google Sheet data:", error.message);
-        if (error.code === 400) {
-            console.error(`This might mean the sheet name "${process.env.GOOGLE_SHEET_NAME}" is incorrect or does not exist in the spreadsheet.`);
-        } else if (error.code === 404) {
-             console.error(`This might mean the spreadsheet ID "${process.env.GOOGLE_SHEET_ID}" is incorrect.`);
-        }
-        console.error("Please ensure 'credentials.json' exists and the GOOGLE_SHEET_ID/GOOGLE_SHEET_NAME are correct in .env.");
-        throw new Error("Could not fetch pricing data from Google Sheets.");
     }
 }
 
