@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useBRDRuns } from '../hooks/useBRDRuns';
 import { uploadBRDFile } from '../services/api';
 
@@ -65,8 +66,10 @@ export default function UploadPage() {
           <ul className="space-y-2">
             {data?.map((item: any) => (
               <li key={item.id} className="border p-2 rounded">
-                <div className="font-medium">{item.name}</div>
-                <div className="text-xs text-gray-500">{item.id}</div>
+                <Link to={`/run/${item.id}`} className="block">
+                  <div className="font-medium">{item.name}</div>
+                  <div className="text-xs text-gray-500">{item.id}</div>
+                </Link>
               </li>
             ))}
           </ul>
