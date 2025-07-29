@@ -1073,7 +1073,14 @@ app.get('/ps/tasks/:runId/:taskId', async (req, res) => {
     const md = allFields.map(f => {
       const label = f.label || f.key;
       const data  = f.data;
-      const val = Array.isArray(data) ? data.join(', ') : String(data);
+      let val;
+      if (Array.isArray(data)) {
+        val = data.join(', ');
+      } else if (data && typeof data === 'object') {
+        val = JSON.stringify(data);
+      } else {
+        val = String(data);
+      }
       return `**${label}:** ${val}`;
     }).join('\n\n');
 
