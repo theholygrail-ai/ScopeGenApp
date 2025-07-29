@@ -22,3 +22,8 @@ export const uploadBRDFile = async (file: File) => {
 
   return response.data;
 };
+
+export const generateSow = async (markdown: string) => {
+  const response = await api.post('/generate-sow', { markdown });
+  return response.data;
+};

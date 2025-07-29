@@ -1203,6 +1203,22 @@ app.post('/upload', async (req, res) => {
     }
 });
 
+// Endpoint to run the agentic workflow on raw markdown text
+app.post('/generate-sow', async (req, res) => {
+    try {
+        const { markdown } = req.body || {};
+        if (!markdown) {
+            return res.status(400).json({ message: 'No markdown provided' });
+        }
+
+        const generated = await sowOrchestrator(markdown, brandContext);
+        res.status(200).json({ markdown: generated });
+    } catch (error) {
+        console.error('Error generating SOW from markdown:', error);
+        res.status(500).json({ message: 'Failed to generate SOW' });
+    }
+});
+
 // --- Export Endpoints ---
 app.post('/export/pdf', async (req, res) => {
     try {
