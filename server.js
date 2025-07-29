@@ -994,7 +994,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
-app.use(express.static(__dirname));
 app.get('/brandcontext', (req, res) => {
     res.json(brandContext);
 });
@@ -1145,7 +1144,10 @@ app.post('/ps/runs', async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
-app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
+// Redirect requests to the deprecated HTML page to the new upload endpoint
+app.get('/', (req, res) => {
+  res.redirect('/upload');
+});
 
 app.post('/upload', async (req, res) => {
     try {
