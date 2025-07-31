@@ -21,6 +21,8 @@ const pdf = require('pdf-parse');
 const { mdToPdf } = require('md-to-pdf');
 const PPTX = require('pptxgenjs');
 const { brandContext } = require('./config/brandContext');
+const { generateWithFallback } = require('./services/aiProvider');
+const { logAiUsage } = require('./utils/logging');
 
 // 2. Initialize Express App & Gemini AI
 const app = express();
@@ -388,7 +390,10 @@ async function essentialInfoAgent(data) {
     ${JSON.stringify(data, null, 2)}
     """
 `;
-    return await generateContentWithRetry(prompt);
+    const start = Date.now();
+    const { text, source } = await generateWithFallback(prompt);
+    logAiUsage({ prompt, source, duration: Date.now() - start, outputLength: text.length });
+    return text;
 }
 
 /**
