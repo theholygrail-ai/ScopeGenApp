@@ -9,6 +9,9 @@ const {
   getSlideWithHistory,
 } = require('../services/slidePersistence');
 
+// Test-only helper mirroring slideEditor.revertSlideToVersion. Keeps the
+// persistence tests independent from editor logic.
+
 function revertSlideToVersion(slide, versionIndex) {
   if (versionIndex < 0 || versionIndex >= slide.versionHistory.length) {
     throw new Error('Invalid version index');
