@@ -54,6 +54,7 @@ async function applySlideEdit(slide, userInstruction) {
     instruction: userInstruction,
   });
   slide.currentHtml = sanitized;
+  slide.versionNumber = slide.versionHistory.length;
   slide.chatHistory.push({ role: 'user', content: userInstruction, timestamp: Date.now() });
   slide.chatHistory.push({ role: 'assistant', content: sanitized, timestamp: Date.now() });
   logAiUsage({ prompt: userInstruction, source, duration, outputLength: (updatedHtmlRaw || '').length });
@@ -72,6 +73,7 @@ function revertSlideToVersion(slide, versionIndex) {
     instruction: `Reverted to version ${versionIndex}`,
   });
   slide.currentHtml = version.html;
+  slide.versionNumber = slide.versionHistory.length;
   return slide;
 }
 

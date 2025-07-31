@@ -21,6 +21,7 @@ router.post('/generate', async (req, res) => {
     if (!fullSow) return res.status(400).json({ error: 'fullSow markdown is required' });
 
     const slides = await generateSlidesFromMarkdown(fullSow, brandContext);
+    slides.forEach(s => { if (!s.versionNumber) s.versionNumber = 1; });
     if (useDb) {
       try {
         const runId = await createRunWithSlides(fullSow, slides, null);
@@ -36,6 +37,33 @@ router.post('/generate', async (req, res) => {
   } catch (err) {
     console.error('[SlideGeneration] failed', err);
     res.status(500).json({ error: 'Slide generation failed', detail: err.message });
+  }
+});
+
+// Fetch a single slide with history
+router.get('/:slideId', async (req, res) => {
+  try {
+    const { slideId } = req.params;
+    if (useDb) {
+      const slide = await getSlideWithHistory(slideId);
+      if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      slide.chatHistory = slide.chatHistory || [];
+      slide.versionHistory = slide.versionHistory || [];
+      if (!slide.versionNumber) slide.versionNumber = slide.versionHistory.length;
+      slide.currentHtml = slide.currentHtml || '';
+      return res.json({ slide });
+    } else {
+      const slide = slideStore.get(slideId);
+      if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      slide.chatHistory = slide.chatHistory || [];
+      slide.versionHistory = slide.versionHistory || [];
+      if (!slide.versionNumber) slide.versionNumber = slide.versionHistory.length;
+      slide.currentHtml = slide.currentHtml || '';
+      return res.json({ slide });
+    }
+  } catch (err) {
+    console.error('[SlideFetch] failed', err);
+    res.status(500).json({ error: 'Fetch failed', detail: err.message });
   }
 });
 

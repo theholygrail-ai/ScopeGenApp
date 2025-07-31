@@ -20,6 +20,9 @@ const { GoogleAuth } = require('google-auth-library');
 const pdf = require('pdf-parse');
 const { mdToPdf } = require('md-to-pdf');
 const PPTX = require('pptxgenjs');
+let JSDOM;
+try { ({ JSDOM } = require('jsdom')); } catch { JSDOM = null; }
+const { sanitizeHtmlFragment } = require('./services/slideGenerator');
 const { brandContext } = require('./config/brandContext');
 const { generateWithFallback } = require('./services/aiProvider');
 const { logAiUsage } = require('./utils/logging');
@@ -1233,6 +1236,40 @@ app.post('/generate-sow', async (req, res) => {
 });
 
 // --- Export Endpoints ---
+
+function htmlToPptxElements(html, slide) {
+    if (!JSDOM) return false;
+    const dom = new JSDOM(`<div>${html}</div>`);
+    const container = dom.window.document.querySelector('div');
+    let y = 0.5;
+    container.childNodes.forEach(node => {
+        if (node.nodeType === 1) {
+            const tag = node.tagName.toLowerCase();
+            const text = node.textContent.trim();
+            if (!text) return;
+            if (/^h[1-3]$/.test(tag)) {
+                const level = parseInt(tag[1], 10);
+                slide.addText(text, { x: 0.5, y, fontSize: level === 1 ? 24 : level === 2 ? 20 : 18, bold: level === 1 });
+                y += 0.6;
+            } else if (tag === 'ul' || tag === 'ol') {
+                const items = Array.from(node.querySelectorAll('li'));
+                items.forEach(li => {
+                    slide.addText(li.textContent.trim(), { x: 0.8, y, fontSize: 14, bullet: true });
+                    y += 0.3;
+                });
+            } else {
+                slide.addText(text, { x: 0.5, y, fontSize: 14 });
+                y += 0.4;
+            }
+        } else if (node.nodeType === 3) {
+            const txt = node.textContent.trim();
+            if (txt) {
+                slide.addText(txt, { x: 0.5, y, fontSize: 14 });
+                y += 0.4;
+            }
+        }
+    });
+}
 app.post('/export/pdf', async (req, res) => {
     try {
         const { markdown } = req.body || {};
@@ -1309,19 +1346,24 @@ app.get('/export/pptx/run/:runId', async (req, res) => {
         pptx.layout = 'LAYOUT_WIDE';
         slidesRes.rows.forEach((row) => {
             const slide = pptx.addSlide();
-            const lines = row.original_markdown.split(/\n/);
-            let y = 0.5;
-            lines.forEach(line => {
-                if (/^#+/.test(line)) {
-                    const level = line.match(/^#+/)[0].length;
-                    const text = line.replace(/^#+\s*/, '');
-                    slide.addText(text, { x: 0.5, y, fontSize: level === 1 ? 24 : 20, bold: level === 1 });
-                    y += 0.6;
-                } else if (/^-\s+/.test(line)) {
-                    slide.addText(line.replace(/^-\s+/, ''), { x: 0.8, y, fontSize: 14, bullet: true });
-                    y += 0.3;
-                }
-            });
+            const html = sanitizeHtmlFragment(row.current_html || '');
+            if (html) {
+                htmlToPptxElements(html, slide);
+            } else {
+                const lines = row.original_markdown.split(/\n/);
+                let y = 0.5;
+                lines.forEach(line => {
+                    if (/^#+/.test(line)) {
+                        const level = line.match(/^#+/)[0].length;
+                        const text = line.replace(/^#+\s*/, '');
+                        slide.addText(text, { x: 0.5, y, fontSize: level === 1 ? 24 : 20, bold: level === 1 });
+                        y += 0.6;
+                    } else if (/^-\s+/.test(line)) {
+                        slide.addText(line.replace(/^-\s+/, ''), { x: 0.8, y, fontSize: 14, bullet: true });
+                        y += 0.3;
+                    }
+                });
+            }
             if (/stakeholders/i.test(row.original_markdown)) {
                 brandContext.stakeholders.forEach((s, i) => {
                     const x = 0.5 + (i % 3) * 3;

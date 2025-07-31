@@ -23,6 +23,7 @@ Slides are generated and edited via the `/slides` routes.
 
 * `POST /slides/generate` body `{ fullSow: "markdown" }` → returns an array of slide objects with `id` and `currentHtml`.
 * `POST /slides/:id/edit` body `{ instruction: "Add teal header" }` → updates the slide and returns it.
+* `GET /slides/:id` → returns a single slide with its version and chat history.
 * `GET /slides/:id/versions` → lists prior versions of the slide HTML.
 * `POST /slides/:id/revert` body `{ versionIndex: 0 }` → restores a previous version.
 
@@ -31,4 +32,4 @@ Each slide tracks `chatHistory`, `currentHtml`, and `versionHistory` as it is ed
 When `DATABASE_URL` is provided, generated slides are persisted with a run identifier. Additional endpoints become available:
 
 * `GET /slides/export/html/:runId` → downloads a consolidated HTML presentation for a run.
-* `GET /export/pptx/run/:runId` → generates a PPTX file from the stored slides.
+* `GET /export/pptx/run/:runId` → generates a PPTX file from the stored slides using their latest HTML.
