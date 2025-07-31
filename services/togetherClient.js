@@ -7,7 +7,7 @@
 const fetch = require('../utils/fetcher');
 const { together } = require('../config/aiConfig');
 
-const DEFAULT_MODEL = 'codellama/CodeLlama-34b-Instruct-hf';
+const DEFAULT_MODEL = 'Qwen/Qwen2.5-Coder-32B-Instruct';
 
 function fetchWithTimeout(url, options = {}, timeout = 30000) {
   const controller = new AbortController();
