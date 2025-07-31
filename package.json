@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/dataAggregator.test.js && node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js && node tests/psCreateRunRoute.test.js && node tests/psListRunsRoute.test.js && node tests/togetherClient.test.js && node tests/aiProvider.test.js"
+    "test": "node tests/dataAggregator.test.js && node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js && node tests/psCreateRunRoute.test.js && node tests/psListRunsRoute.test.js && node tests/togetherClient.test.js && node tests/togetherClientMalformed.test.js && node tests/aiProvider.test.js && node tests/aiProviderFailure.test.js"
   },
   "author": "",
   "license": "ISC",

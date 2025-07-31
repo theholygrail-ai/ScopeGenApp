@@ -4,10 +4,17 @@
  * optional TOGETHER_API_BASE environment variables which are loaded
  * in ../config/aiConfig.js.
  */
-const fetch = (...args) => global.fetch(...args);
+const fetch = require('../utils/fetcher');
 const { together } = require('../config/aiConfig');
 
 const DEFAULT_MODEL = 'codellama/CodeLlama-34b-Instruct-hf';
+
+function fetchWithTimeout(url, options = {}, timeout = 30000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(id));
+}
 
 async function retryWithBackoff(fn, { retries = 3, baseDelay = 500 } = {}) {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -43,7 +50,7 @@ async function callCompletion({
   if (stop) body.stop = stop;
 
   const fn = async () => {
-    const res = await fetch(`${together.base}/v1/completions`, {
+    const res = await fetchWithTimeout(`${together.base}/v1/completions`, {
       method: 'POST',
       headers: buildHeaders(),
       body: JSON.stringify(body),
@@ -76,7 +83,7 @@ async function callChatCompletion({
   const body = { model, messages, max_tokens, temperature, stream };
 
   const fn = async () => {
-    const res = await fetch(`${together.base}/v1/chat/completions`, {
+    const res = await fetchWithTimeout(`${together.base}/v1/chat/completions`, {
       method: 'POST',
       headers: buildHeaders(),
       body: JSON.stringify(body),
