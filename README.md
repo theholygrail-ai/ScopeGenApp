@@ -13,9 +13,14 @@ TOGETHER_API_KEY=<your together.ai key>
 DATABASE_URL=postgres://user:pass@localhost:5432/db
 # Optional override
 TOGETHER_API_BASE=https://api.together.ai
+# Cache settings
+CACHE_TTL_MS=3600000
+ADMIN_TOKEN=changeme
 ```
 
 The `PS_API_KEY` is required for the `/ps/tasks/:runId` endpoint which lists tasks for a workflow run.
+
+An admin endpoint `POST /admin/cache/clear` clears the in-memory slide cache and resets metrics. Send the `x-admin-token` header matching `ADMIN_TOKEN`.
 
 ## Slide Editing API
 

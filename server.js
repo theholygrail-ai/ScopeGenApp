@@ -10,6 +10,7 @@ require('dotenv').config();
 const fetch = require('./utils/fetcher');
 const PS_API_KEY = process.env.PS_API_KEY || 'test';
 const PS_BASE_URL = 'https://public-api.process.st/api/v1.1';
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin';
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 const { GoogleAuth } = require('google-auth-library');
@@ -21,7 +22,8 @@ try { ({ JSDOM } = require('jsdom')); } catch { JSDOM = null; }
 const { sanitizeHtmlFragment } = require('./services/slideGenerator');
 const { brandContext } = require('./config/brandContext');
 const { generateWithFallback } = require('./services/aiProvider');
-const { logAiUsage, getCacheMetrics } = require('./utils/logging');
+const { logAiUsage, getCacheMetrics, resetCacheMetrics } = require('./utils/logging');
+const { clear: clearCache } = require('./services/slideCache');
 const slideRoutes = require('./routes/slides');
 const { pool } = require('./services/db');
 const runMigrations = require('./scripts/migrate');
@@ -1012,6 +1014,14 @@ app.get('/brandcontext', (req, res) => {
 });
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', ...getCacheMetrics() });
+});
+
+app.post('/admin/cache/clear', (req, res) => {
+    const token = req.headers['x-admin-token'];
+    if (token !== ADMIN_TOKEN) return res.status(403).json({ error: 'forbidden' });
+    clearCache();
+    resetCacheMetrics();
+    res.json({ status: 'cleared' });
 });
 /**
  * GET /ps/tasks/:runId

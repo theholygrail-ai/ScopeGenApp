@@ -57,7 +57,7 @@ async function applySlideEdit(slide, userInstruction) {
     slide.versionHistory.push({
       html: slide.currentHtml,
       timestamp: Date.now(),
-      source: 'cache',
+      source: `cache(${cached.metadata.model})`,
       instruction: userInstruction,
     });
     slide.currentHtml = cached.html;

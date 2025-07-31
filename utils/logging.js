@@ -21,4 +21,9 @@ function getCacheMetrics() {
   return { cacheHits, cacheMisses };
 }
 
-module.exports = { hash, logAiUsage, logCacheMetric, getCacheMetrics };
+function resetCacheMetrics() {
+  cacheHits = 0;
+  cacheMisses = 0;
+}
+
+module.exports = { hash, logAiUsage, logCacheMetric, getCacheMetrics, resetCacheMetrics };
