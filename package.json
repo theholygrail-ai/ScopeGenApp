@@ -21,6 +21,7 @@
     "md-to-pdf": "^5.1.0",
     "pdf-parse": "^1.1.1",
     "sanitize-html": "^2.12.1",
-    "pptxgenjs": "^3.9.0"
+    "pptxgenjs": "^3.9.0",
+    "pg": "^8.11.3"
   }
 }
