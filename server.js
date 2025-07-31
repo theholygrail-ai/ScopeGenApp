@@ -7,7 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const mammoth = require('mammoth');
 require('dotenv').config();
-const fetch = (...args) => global.fetch(...args);
+const fetch = require('./utils/fetcher');
 const PS_API_KEY = process.env.PS_API_KEY;
 const PS_BASE_URL = 'https://public-api.process.st/api/v1.1';
 if (!PS_API_KEY) {
