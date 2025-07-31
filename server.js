@@ -23,6 +23,7 @@ const PPTX = require('pptxgenjs');
 const { brandContext } = require('./config/brandContext');
 const { generateWithFallback } = require('./services/aiProvider');
 const { logAiUsage } = require('./utils/logging');
+const slideRoutes = require('./routes/slides');
 
 // 2. Initialize Express App & Gemini AI
 const app = express();
@@ -1004,6 +1005,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
+app.use('/slides', slideRoutes);
 app.get('/brandcontext', (req, res) => {
     res.json(brandContext);
 });
