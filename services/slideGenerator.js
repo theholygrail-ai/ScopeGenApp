@@ -80,6 +80,7 @@ async function generateSlidesFromMarkdown(fullMarkdown, brandContext) {
     const sanitized = sanitizeHtmlFragment(text);
     slide.versionHistory.push({ html: slide.currentHtml, timestamp: Date.now(), source });
     slide.currentHtml = sanitized;
+    slide.versionNumber = slide.versionHistory.length;
     logAiUsage({ prompt, source, duration, outputLength: (text || '').length });
     slide.chatHistory.push({ role: 'assistant', content: sanitized });
   }
