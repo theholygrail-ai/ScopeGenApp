@@ -46,8 +46,8 @@ async function createRunWithSlides(fullMarkdown, slides, userId = null) {
   }
 }
 
-async function persistSlideEdit(slideId, updatedHtml, source, instruction, userId) {
-  if (!pool) return;
+async function persistSlideEdit(slideId, updatedHtml, source, instruction, userId = null) {
+  if (!pool) throw new Error('DATABASE_URL not configured');
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -83,4 +83,31 @@ async function getSlidesByRun(runId) {
   return res.rows.map(normalizeSlideRow);
 }
 
-module.exports = { createRunWithSlides, persistSlideEdit, getSlidesByRun, normalizeSlideRow };
+async function getSlideWithHistory(slideId) {
+  if (!pool) throw new Error('DATABASE_URL not configured');
+  const slideRes = await pool.query('SELECT * FROM slides WHERE id=$1', [slideId]);
+  if (slideRes.rowCount === 0) return null;
+  const slide = normalizeSlideRow(slideRes.rows[0]);
+
+  const versionsRes = await pool.query(
+    'SELECT version_number, instruction, source, html, created_at FROM slide_versions WHERE slide_id=$1 ORDER BY version_number',
+    [slideId]
+  );
+  slide.versionHistory = versionsRes.rows.map(v => ({
+    versionNumber: v.version_number,
+    instruction: v.instruction,
+    source: v.source,
+    html: v.html,
+    createdAt: v.created_at,
+  }));
+
+  return slide;
+}
+
+module.exports = {
+  createRunWithSlides,
+  persistSlideEdit,
+  getSlidesByRun,
+  getSlideWithHistory,
+  normalizeSlideRow,
+};
