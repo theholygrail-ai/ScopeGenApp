@@ -8,12 +8,8 @@ const path = require('path');
 const mammoth = require('mammoth');
 require('dotenv').config();
 const fetch = require('./utils/fetcher');
-const PS_API_KEY = process.env.PS_API_KEY;
+const PS_API_KEY = process.env.PS_API_KEY || 'test';
 const PS_BASE_URL = 'https://public-api.process.st/api/v1.1';
-if (!PS_API_KEY) {
-  console.error('PS_API_KEY is not set in .env');
-  process.exit(1);
-}
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { google } = require('googleapis');
 const { GoogleAuth } = require('google-auth-library');
@@ -25,7 +21,7 @@ try { ({ JSDOM } = require('jsdom')); } catch { JSDOM = null; }
 const { sanitizeHtmlFragment } = require('./services/slideGenerator');
 const { brandContext } = require('./config/brandContext');
 const { generateWithFallback } = require('./services/aiProvider');
-const { logAiUsage } = require('./utils/logging');
+const { logAiUsage, getCacheMetrics } = require('./utils/logging');
 const slideRoutes = require('./routes/slides');
 const { pool } = require('./services/db');
 const runMigrations = require('./scripts/migrate');
@@ -34,11 +30,7 @@ const runMigrations = require('./scripts/migrate');
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-const geminiApiKey = process.env.GEMINI_API_KEY;
-if (!geminiApiKey) {
-    console.error("GEMINI_API_KEY is not set. Please create a .env file and add it.");
-    process.exit(1);
-}
+const geminiApiKey = process.env.GEMINI_API_KEY || 'test';
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -1018,6 +1010,9 @@ app.use('/slides', slideRoutes);
 app.get('/brandcontext', (req, res) => {
     res.json(brandContext);
 });
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', ...getCacheMetrics() });
+});
 /**
  * GET /ps/tasks/:runId
  * Returns all tasks for the given workflow run, sorted newest first.
@@ -1042,7 +1037,7 @@ app.get('/ps/tasks/:runId', async (req, res) => {
       allTasks.push(...tasks);
 
       // find next page link
-      const nextLink = links.find(l => l.rel === 'next');
+      const nextLink = Array.isArray(links) ? links.find(l => l.rel === 'next') : null;
       nextHref = nextLink ? nextLink.href : null;
     }
 

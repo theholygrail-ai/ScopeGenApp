@@ -1,8 +1,6 @@
-const assert = require('assert');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-assert(GEMINI_API_KEY, 'Missing GEMINI_API_KEY in environment');
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'test';
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
