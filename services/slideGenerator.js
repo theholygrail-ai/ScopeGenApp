@@ -1,6 +1,12 @@
 const { generateWithFallback } = require('./aiProvider');
 const { logAiUsage } = require('../utils/logging');
 const crypto = require('crypto');
+let sanitizeHtml;
+try {
+  sanitizeHtml = require('sanitize-html');
+} catch {
+  sanitizeHtml = null;
+}
 
 function makeSlideId(text) {
   return crypto.createHash('sha1').update(text).digest('hex').slice(0, 8);
@@ -23,6 +29,15 @@ function chunkSowMarkdown(fullMarkdown) {
 
 function sanitizeHtmlFragment(html) {
   if (!html) return '';
+  if (sanitizeHtml) {
+    return sanitizeHtml(html, {
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+      allowedAttributes: {
+        '*': ['class', 'style', 'href', 'src', 'alt']
+      }
+    });
+  }
+  // Fallback regex-based sanitization if sanitize-html isn't available
   return html
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
     .replace(/javascript:/gi, '')
