@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { generateSlidesFromMarkdown } = require('../services/slideGenerator');
 const { applySlideEdit, revertSlideToVersion } = require('../services/slideEditor');
-const { createRunWithSlides, persistSlideEdit, getSlidesByRun } = require('../services/slidePersistence');
+const { createRunWithSlides, persistSlideEdit, getSlidesByRun, normalizeSlideRow } = require('../services/slidePersistence');
 const { pool } = require('../services/db');
 const { brandContext } = require('../config/brandContext');
 
@@ -44,14 +44,9 @@ router.post('/:slideId/edit', async (req, res) => {
     if (useDb) {
       const resSlide = await pool.query('SELECT * FROM slides WHERE id=$1', [slideId]);
       if (resSlide.rowCount === 0) return res.status(404).json({ error: 'Slide not found' });
-      const slide = {
-        id: resSlide.rows[0].id,
-        title: resSlide.rows[0].title,
-        originalMarkdown: resSlide.rows[0].original_markdown,
-        currentHtml: resSlide.rows[0].current_html,
-        versionHistory: [],
-        chatHistory: []
-      };
+      const slide = normalizeSlideRow(resSlide.rows[0]);
+      slide.versionHistory = [];
+      slide.chatHistory = [];
       const updated = await applySlideEdit(slide, instruction);
       await persistSlideEdit(slideId, updated.currentHtml, updated.versionHistory.slice(-1)[0].source, instruction, req.userId || null);
       res.json({ slide: { id: slideId, currentHtml: updated.currentHtml } });
