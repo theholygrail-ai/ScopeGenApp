@@ -101,6 +101,9 @@ async function getSlideWithHistory(slideId) {
     createdAt: v.created_at,
   }));
 
+  // ensure chatHistory array exists for editing logic
+  slide.chatHistory = slide.chatHistory || [];
+
   return slide;
 }
 

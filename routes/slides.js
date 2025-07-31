@@ -7,7 +7,6 @@ const {
   persistSlideEdit,
   getSlidesByRun,
   getSlideWithHistory,
-  normalizeSlideRow,
 } = require('../services/slidePersistence');
 const { pool } = require('../services/db');
 const { brandContext } = require('../config/brandContext');
