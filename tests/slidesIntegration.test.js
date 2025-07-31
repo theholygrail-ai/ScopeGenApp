@@ -20,6 +20,8 @@ const getHandler = p => app._router.stack.find(r => r.route && r.route.path === 
   const versions = getHandler('/slides/:slideId/versions');
   const revert = getHandler('/slides/:slideId/revert');
   const fetchOne = getHandler('/slides/:slideId');
+  const lock = getHandler('/slides/:slideId/lock');
+  const unlock = getHandler('/slides/:slideId/unlock');
   const exportHtml = getHandler('/slides/export/html/:runId');
   const exportPptx = getHandler('/export/pptx/run/:runId');
 
@@ -58,6 +60,24 @@ const getHandler = p => app._router.stack.find(r => r.route && r.route.path === 
   assert.ok(Buffer.isBuffer(pptBuf));
   assert.ok(pptBuf.length > 0);
   assert.ok(pptBuf.toString().includes('Slide 1'));
+
+  // lock slide
+  let lockRes;
+  await lock({ params: { slideId } }, { json: d => { lockRes = d; }, status() { return this; } });
+  assert.strictEqual(lockRes.slide.isLocked, true);
+
+  // attempt edit should fail
+  const conflict = { statusCode: null, data: null, status(c){ this.statusCode = c; return this; }, json(d){ this.data = d; } };
+  await edit({ params: { slideId }, body: { instruction: 'x' } }, conflict);
+  assert.strictEqual(conflict.statusCode, 409);
+
+  // unlock slide
+  let unlockRes;
+  await unlock({ params: { slideId } }, { json: d => { unlockRes = d; }, status(){ return this; } });
+  assert.strictEqual(unlockRes.slide.isLocked, false);
+
+  // edit should succeed now
+  await edit({ params: { slideId }, body: { instruction: 'y' } }, { json() {}, status(){ return this; } });
 
   console.log('✅ slides integration flow works');
 })();

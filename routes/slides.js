@@ -7,6 +7,8 @@ const {
   persistSlideEdit,
   getSlidesByRun,
   getSlideWithHistory,
+  lockSlide,
+  unlockSlide,
 } = require('../services/slidePersistence');
 const { pool } = require('../services/db');
 const { brandContext } = require('../config/brandContext');
@@ -74,17 +76,23 @@ router.post('/:slideId/edit', async (req, res) => {
     const { instruction } = req.body;
     if (!instruction) return res.status(400).json({ error: 'instruction required' });
 
-    if (useDb) {
+  if (useDb) {
       const slideWithHistory = await getSlideWithHistory(slideId);
       if (!slideWithHistory) return res.status(404).json({ error: 'Slide not found' });
+      if (slideWithHistory.isLocked) {
+        return res.status(409).json({ error: 'Slide is locked/finalized and cannot be edited' });
+      }
 
       const updated = await applySlideEdit(slideWithHistory, instruction);
       const lastVersion = updated.versionHistory.slice(-1)[0];
       await persistSlideEdit(slideId, updated.currentHtml, lastVersion.source, instruction, null);
-      return res.json({ slide: { id: slideId, currentHtml: updated.currentHtml } });
+      return res.json({ slide: { id: slideId, currentHtml: updated.currentHtml, isLocked: slideWithHistory.isLocked, finalizedAt: slideWithHistory.finalizedAt } });
     } else {
       const slide = slideStore.get(slideId);
       if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      if (slide.isLocked) {
+        return res.status(409).json({ error: 'Slide is locked/finalized and cannot be edited' });
+      }
       const updated = await applySlideEdit(slide, instruction);
       slideStore.set(slideId, updated);
       return res.json({ slide: updated });
@@ -131,7 +139,7 @@ router.post('/:slideId/revert', async (req, res) => {
       const target = slide.versionHistory[versionIndex];
       const reverted = revertSlideToVersion(slide, versionIndex);
       await persistSlideEdit(slideId, target.html, 'revert', `Reverted to version ${target.versionNumber}`, null);
-      return res.json({ slide: { id: slideId, currentHtml: target.html } });
+      return res.json({ slide: { id: slideId, currentHtml: target.html, isLocked: slide.isLocked, finalizedAt: slide.finalizedAt } });
     } else {
       const slide = slideStore.get(slideId);
       if (!slide) return res.status(404).json({ error: 'Slide not found' });
@@ -142,6 +150,48 @@ router.post('/:slideId/revert', async (req, res) => {
   } catch (err) {
     console.error('[SlideRevert] failed', err);
     res.status(500).json({ error: 'Revert failed', detail: err.message });
+  }
+});
+
+// Lock a slide
+router.post('/:slideId/lock', async (req, res) => {
+  try {
+    const { slideId } = req.params;
+    if (useDb) {
+      const slide = await lockSlide(slideId, null);
+      return res.json({ slide });
+    } else {
+      const slide = slideStore.get(slideId);
+      if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      slide.isLocked = true;
+      slide.finalizedAt = new Date();
+      slideStore.set(slideId, slide);
+      return res.json({ slide });
+    }
+  } catch (err) {
+    console.error('[SlideLock] failed', err);
+    res.status(500).json({ error: 'Lock failed', detail: err.message });
+  }
+});
+
+// Unlock a slide
+router.post('/:slideId/unlock', async (req, res) => {
+  try {
+    const { slideId } = req.params;
+    if (useDb) {
+      const slide = await unlockSlide(slideId, null);
+      return res.json({ slide });
+    } else {
+      const slide = slideStore.get(slideId);
+      if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      slide.isLocked = false;
+      slide.finalizedAt = null;
+      slideStore.set(slideId, slide);
+      return res.json({ slide });
+    }
+  } catch (err) {
+    console.error('[SlideUnlock] failed', err);
+    res.status(500).json({ error: 'Unlock failed', detail: err.message });
   }
 });
 

@@ -23,6 +23,8 @@ function chunkSowMarkdown(fullMarkdown) {
       currentHtml: null,
       versionHistory: [],
       chatHistory: [],
+      isLocked: false,
+      finalizedAt: null,
     };
   });
 }

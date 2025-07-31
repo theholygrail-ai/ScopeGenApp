@@ -27,6 +27,8 @@ class MockPool {
         current_html: html,
         model_source: source,
         version_number: ver,
+        is_locked: false,
+        finalized_at: null,
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -63,6 +65,24 @@ class MockPool {
       slide.version_number = versionNumber;
       slide.updated_at = new Date();
       return { rowCount: 1 };
+    }
+    if (/UPDATE slides SET is_locked=true/i.test(text)) {
+      const slideId = params[0];
+      const slide = this.slides.find(s => s.id === slideId);
+      if (!slide) return { rowCount: 0 };
+      slide.is_locked = true;
+      slide.finalized_at = new Date();
+      slide.updated_at = new Date();
+      return { rowCount: 1, rows: [slide] };
+    }
+    if (/UPDATE slides SET is_locked=false/i.test(text)) {
+      const slideId = params[0];
+      const slide = this.slides.find(s => s.id === slideId);
+      if (!slide) return { rowCount: 0 };
+      slide.is_locked = false;
+      slide.finalized_at = null;
+      slide.updated_at = new Date();
+      return { rowCount: 1, rows: [slide] };
     }
     if (/SELECT \* FROM slides WHERE run_id=\$1/i.test(text)) {
       const runId = params[0];
