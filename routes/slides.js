@@ -132,17 +132,23 @@ router.post('/:slideId/revert', async (req, res) => {
     if (useDb) {
       const slide = await getSlideWithHistory(slideId);
       if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      if (slide.isLocked) {
+        return res.status(409).json({ error: 'Slide is locked/finalized and cannot be reverted' });
+      }
       if (versionIndex < 0 || versionIndex >= slide.versionHistory.length) {
         return res.status(400).json({ error: 'Invalid version index' });
       }
 
       const target = slide.versionHistory[versionIndex];
-      const reverted = revertSlideToVersion(slide, versionIndex);
+      revertSlideToVersion(slide, versionIndex);
       await persistSlideEdit(slideId, target.html, 'revert', `Reverted to version ${target.versionNumber}`, null);
-      return res.json({ slide: { id: slideId, currentHtml: target.html, isLocked: slide.isLocked, finalizedAt: slide.finalizedAt } });
+      return res.json({ slide: { id: slideId, currentHtml: target.html, isLocked: slide.isLocked, finalizedAt: slide.finalizedAt, versionNumber: slide.versionNumber, chatHistory: slide.chatHistory } });
     } else {
       const slide = slideStore.get(slideId);
       if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      if (slide.isLocked) {
+        return res.status(409).json({ error: 'Slide is locked/finalized and cannot be reverted' });
+      }
       const reverted = revertSlideToVersion(slide, versionIndex);
       slideStore.set(slideId, reverted);
       return res.json({ slide: reverted });
@@ -158,7 +164,8 @@ router.post('/:slideId/lock', async (req, res) => {
   try {
     const { slideId } = req.params;
     if (useDb) {
-      const slide = await lockSlide(slideId, null);
+      await lockSlide(slideId, null);
+      const slide = await getSlideWithHistory(slideId);
       return res.json({ slide });
     } else {
       const slide = slideStore.get(slideId);
@@ -179,7 +186,8 @@ router.post('/:slideId/unlock', async (req, res) => {
   try {
     const { slideId } = req.params;
     if (useDb) {
-      const slide = await unlockSlide(slideId, null);
+      await unlockSlide(slideId, null);
+      const slide = await getSlideWithHistory(slideId);
       return res.json({ slide });
     } else {
       const slide = slideStore.get(slideId);
