@@ -1,11 +1,24 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { generateSlides } from '../services/api';
 
 export default function GeneratedSowPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const initial = (location.state as any)?.markdown || '';
   const [markdown, setMarkdown] = useState(initial);
+  const [generating, setGenerating] = useState(false);
+  const handleGenerateSlides = async () => {
+    setGenerating(true);
+    try {
+      const slides = await generateSlides(markdown);
+      navigate('/slides', { state: { slides, markdown } });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -18,6 +31,13 @@ export default function GeneratedSowPage() {
         value={markdown}
         onChange={(e) => setMarkdown(e.target.value)}
       />
+      <button
+        className="px-4 py-2 bg-green-600 text-white rounded"
+        onClick={handleGenerateSlides}
+        disabled={generating}
+      >
+        {generating ? 'Generating...' : 'Generate Slides'}
+      </button>
     </div>
   );
 }

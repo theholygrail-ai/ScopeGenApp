@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../services/api';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { api, generateSlides } from '../services/api';
 
 interface Slide {
   id: string;
@@ -44,6 +45,8 @@ function diffText(oldStr: string, newStr: string): DiffPart[] {
 }
 
 export default function SlideEditorPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [slides, setSlides] = useState<Slide[]>([]);
   const [selected, setSelected] = useState<Slide | null>(null);
   const [instruction, setInstruction] = useState('');
@@ -52,17 +55,25 @@ export default function SlideEditorPage() {
   const [diff, setDiff] = useState<DiffPart[] | null>(null);
 
   useEffect(() => {
-    const generate = async () => {
-      try {
-        const { data } = await api.post('/slides/generate', { fullSow: '# Slide\nDemo' });
-        setSlides(data.slides);
-        setSelected(data.slides[0]);
-      } catch (err: any) {
-        setError('Failed to load slides');
+    const init = async () => {
+      const passed = (location.state as any) || {};
+      if (passed.slides && passed.slides.length) {
+        setSlides(passed.slides);
+        setSelected(passed.slides[0]);
+        return;
+      }
+      if (passed.markdown) {
+        try {
+          const newSlides = await generateSlides(passed.markdown);
+          setSlides(newSlides);
+          setSelected(newSlides[0]);
+        } catch (err) {
+          setError('Failed to load slides');
+        }
       }
     };
-    generate();
-  }, []);
+    init();
+  }, [location.state]);
 
   const updateSlideInState = (updated: Slide) => {
     setSlides((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -160,6 +171,12 @@ export default function SlideEditorPage() {
           className="mt-2 text-sm underline"
         >
           Revert Last
+        </button>
+        <button
+          onClick={() => navigate('/preview', { state: { slides } })}
+          className="mt-4 px-4 py-2 bg-gray-600 text-white rounded"
+        >
+          Preview Slides
         </button>
       </div>
     </div>
