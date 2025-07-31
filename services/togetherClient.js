@@ -102,4 +102,4 @@ async function callChatCompletion({
   return retryWithBackoff(fn);
 }
 
-module.exports = { callCompletion, callChatCompletion };
+module.exports = { callCompletion, callChatCompletion, DEFAULT_MODEL };

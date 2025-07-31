@@ -26,11 +26,15 @@ const getHandler = p => app._router.stack.find(r => r.route && r.route.path === 
   await gen({ body: { fullSow: '## Slide 1\nA' } }, { json: d => { data = d; }, status(){ return this; } });
   const slideId = data.slides[0].id;
 
-  await lock({ params: { slideId } }, { json() {}, status(){ return this; } });
+  let lockResp;
+  await lock({ params: { slideId } }, { json: d => { lockResp = d.slide; }, status(){ return this; } });
   let slide;
   await fetchOne({ params:{ slideId } }, { json: d => { slide = d.slide; }, status(){ return this; } });
   assert.strictEqual(slide.isLocked, true);
   assert.ok(slide.finalizedAt instanceof Date);
+  assert.ok(Array.isArray(lockResp.versionHistory));
+  assert.strictEqual(lockResp.versionNumber, slide.versionNumber);
+  assert.ok(Array.isArray(lockResp.chatHistory));
 
   const conflict = { statusCode:null, json(){}, status(c){ this.statusCode=c; return this; } };
   await edit({ params:{ slideId }, body:{ instruction:'x' } }, conflict);
@@ -38,7 +42,12 @@ const getHandler = p => app._router.stack.find(r => r.route && r.route.path === 
   await revert({ params:{ slideId }, body:{ versionIndex:0 } }, conflict);
   assert.strictEqual(conflict.statusCode, 409);
 
-  await unlock({ params:{ slideId } }, { json() {}, status(){ return this; } });
+  let unlockResp;
+  await unlock({ params:{ slideId } }, { json: d => { unlockResp = d.slide; }, status(){ return this; } });
+  assert.strictEqual(unlockResp.isLocked, false);
+  assert.strictEqual(unlockResp.finalizedAt, null);
+  assert.ok(Array.isArray(unlockResp.versionHistory));
+  assert.ok(Array.isArray(unlockResp.chatHistory));
   await revert({ params:{ slideId }, body:{ versionIndex:0 } }, { json(){}, status(){ return this; } });
   console.log('✅ lock/unlock persistence and guards work');
 })();

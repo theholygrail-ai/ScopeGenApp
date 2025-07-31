@@ -2,6 +2,7 @@ const { editWithFallback, generateWithFallback } = require('./aiProvider');
 const { sanitizeHtmlFragment } = require('./slideGenerator');
 const { logAiUsage, logCacheMetric, hash } = require('../utils/logging');
 const { makeCacheKey, get: cacheGet, set: cacheSet } = require('./slideCache');
+const { DEFAULT_MODEL } = require('./togetherClient');
 const { brandContext } = require('../config/brandContext');
 
 function shouldCondense(history) {
@@ -45,7 +46,12 @@ function buildEditMessages(slide, userInstruction) {
 async function applySlideEdit(slide, userInstruction) {
   await condenseChatHistoryIfNeeded(slide);
   const messages = buildEditMessages(slide, userInstruction);
-  const cacheKey = makeCacheKey({ slideMarkdown: slide.currentHtml, brandingContext: brandContext, instruction: userInstruction, model: 'fallback' });
+  const cacheKey = makeCacheKey({
+    slideMarkdown: slide.currentHtml,
+    brandingContext: brandContext,
+    instruction: userInstruction,
+    model: DEFAULT_MODEL,
+  });
   const cached = cacheGet(cacheKey);
   if (cached) {
     slide.versionHistory.push({

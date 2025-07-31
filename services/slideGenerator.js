@@ -1,4 +1,5 @@
 const { generateWithFallback } = require('./aiProvider');
+const { DEFAULT_MODEL } = require('./togetherClient');
 const { logAiUsage, logCacheMetric, hash } = require('../utils/logging');
 const { makeCacheKey, get: cacheGet, set: cacheSet } = require('./slideCache');
 const crypto = require('crypto');
@@ -77,7 +78,12 @@ async function generateSlidesFromMarkdown(fullMarkdown, brandContext) {
   const slides = chunkSowMarkdown(fullMarkdown);
   for (const slide of slides) {
     const prompt = buildSlidePrompt(slide.originalMarkdown, brandContext);
-    const cacheKey = makeCacheKey({ slideMarkdown: slide.originalMarkdown, brandingContext: brandContext, instruction: 'initial', model: 'fallback' });
+    const cacheKey = makeCacheKey({
+      slideMarkdown: slide.originalMarkdown,
+      brandingContext: brandContext,
+      instruction: 'initial',
+      model: DEFAULT_MODEL,
+    });
     const cached = cacheGet(cacheKey);
     if (cached) {
       slide.versionHistory.push({ html: slide.currentHtml, timestamp: Date.now(), source: 'cache' });
