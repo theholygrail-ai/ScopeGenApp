@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "migrate": "node scripts/migrate.js",
-    "test": "TOGETHER_API_KEY=t GEMINI_API_KEY=g node tests/dataAggregator.test.js && node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js && node tests/psCreateRunRoute.test.js && node tests/psListRunsRoute.test.js && node tests/togetherClient.test.js && node tests/togetherClientMalformed.test.js && node tests/aiProvider.test.js && node tests/aiProviderFailure.test.js && node tests/slideGenerator.test.js && node tests/slideEditor.test.js && node tests/diff.test.js && node tests/slidesIntegration.test.js && node tests/lockSlideRoute.test.js && node tests/cache.test.js"
+    "test": "TOGETHER_API_KEY=t GEMINI_API_KEY=g node tests/dataAggregator.test.js && node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js && node tests/psCreateRunRoute.test.js && node tests/psListRunsRoute.test.js && node tests/togetherClient.test.js && node tests/togetherClientMalformed.test.js && node tests/aiProvider.test.js && node tests/aiProviderFailure.test.js && node tests/slideGenerator.test.js && node tests/slideEditor.test.js && node tests/diff.test.js && node tests/slidesIntegration.test.js && node tests/lockSlideRoute.test.js && node tests/slideMutationQueue.test.js && node tests/cache.test.js"
   },
   "author": "",
   "license": "ISC",
