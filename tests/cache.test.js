@@ -22,7 +22,7 @@ const { clear } = require('../services/slideCache');
   assert.strictEqual(genCalls, 1);
   slides = await generateSlidesFromMarkdown('## S1\nA', brandContext);
   assert.strictEqual(genCalls, 1);
-  assert.strictEqual(slides[0].versionHistory[1].source, 'cache');
+  assert.strictEqual(slides[0].versionHistory[0].source, 'cache');
 
   const slide = slides[0];
   editCalls = 0;

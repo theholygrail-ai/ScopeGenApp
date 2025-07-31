@@ -69,10 +69,12 @@ function revertSlideToVersion(slide, versionIndex) {
   // lock
   let locked = await lockSlide('s1');
   assert.strictEqual(locked.isLocked, true);
+  assert.ok(locked.finalizedAt instanceof Date);
 
   // unlock
   let unlocked = await unlockSlide('s1');
   assert.strictEqual(unlocked.isLocked, false);
+  assert.strictEqual(unlocked.finalizedAt, null);
 
   // revert to version 0
   const revertedObj = revertSlideToVersion(slide, 0);
