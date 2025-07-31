@@ -70,11 +70,16 @@ const getHandler = p => app._router.stack.find(r => r.route && r.route.path === 
   const conflict = { statusCode: null, data: null, status(c){ this.statusCode = c; return this; }, json(d){ this.data = d; } };
   await edit({ params: { slideId }, body: { instruction: 'x' } }, conflict);
   assert.strictEqual(conflict.statusCode, 409);
+  await revert({ params:{ slideId }, body:{ versionIndex:0 } }, conflict);
+  assert.strictEqual(conflict.statusCode, 409);
 
   // unlock slide
   let unlockRes;
   await unlock({ params: { slideId } }, { json: d => { unlockRes = d; }, status(){ return this; } });
   assert.strictEqual(unlockRes.slide.isLocked, false);
+
+  // revert now that it's unlocked
+  await revert({ params:{ slideId }, body:{ versionIndex:0 } }, { json(){}, status(){ return this; } });
 
   // edit should succeed now
   await edit({ params: { slideId }, body: { instruction: 'y' } }, { json() {}, status(){ return this; } });

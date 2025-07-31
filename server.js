@@ -28,6 +28,7 @@ const { generateWithFallback } = require('./services/aiProvider');
 const { logAiUsage } = require('./utils/logging');
 const slideRoutes = require('./routes/slides');
 const { pool } = require('./services/db');
+const runMigrations = require('./scripts/migrate');
 
 // 2. Initialize Express App & Gemini AI
 const app = express();
@@ -40,6 +41,10 @@ if (!geminiApiKey) {
 }
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+if (pool && process.env.RUN_MIGRATIONS === 'true') {
+  runMigrations().catch(err => console.error('Migration error:', err));
+}
 
 
 // --- Google Sheets Integration ---
