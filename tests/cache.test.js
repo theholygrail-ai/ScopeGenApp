@@ -15,14 +15,17 @@ const { generateSlidesFromMarkdown } = require('../services/slideGenerator');
 const { applySlideEdit } = require('../services/slideEditor');
 const { clear } = require('../services/slideCache');
 
+
 (async () => {
   clear();
   genCalls = 0;
   let slides = await generateSlidesFromMarkdown('## S1\nA', brandContext);
   assert.strictEqual(genCalls, 1);
-  slides = await generateSlidesFromMarkdown('## S1\nA', brandContext);
+  // reorder branding keys to test canonicalization
+  const bc = { fonts: brandContext.fonts, brandName: brandContext.brandName, tagline: brandContext.tagline, palette: brandContext.palette, logoPaths: brandContext.logoPaths, imagery: brandContext.imagery, stakeholders: brandContext.stakeholders };
+  slides = await generateSlidesFromMarkdown('## S1\nA', bc);
   assert.strictEqual(genCalls, 1);
-  assert.strictEqual(slides[0].versionHistory[0].source, 'cache');
+  assert.ok(slides[0].versionHistory[0].source.startsWith('cache('));
 
   const slide = slides[0];
   editCalls = 0;
@@ -30,6 +33,6 @@ const { clear } = require('../services/slideCache');
   assert.strictEqual(editCalls, 1);
   await applySlideEdit(slide, 'change');
   assert.strictEqual(editCalls, 1);
-  assert.strictEqual(slide.versionHistory.slice(-1)[0].source, 'cache');
+  assert.ok(slide.versionHistory.slice(-1)[0].source.startsWith('cache('));
   console.log('✅ cache hit works for generation and edit');
 })();

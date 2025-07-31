@@ -86,7 +86,7 @@ async function generateSlidesFromMarkdown(fullMarkdown, brandContext) {
     });
     const cached = cacheGet(cacheKey);
     if (cached) {
-      slide.versionHistory.push({ html: slide.currentHtml, timestamp: Date.now(), source: 'cache' });
+      slide.versionHistory.push({ html: slide.currentHtml, timestamp: Date.now(), source: `cache(${cached.metadata.model})` });
       slide.currentHtml = cached.html;
       slide.versionNumber = slide.versionHistory.length;
       logCacheMetric({ hit: true, type: 'generate' });
