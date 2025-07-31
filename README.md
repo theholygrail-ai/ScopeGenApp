@@ -9,6 +9,8 @@ Create a `.env` file with the following entries:
 GEMINI_API_KEY=<your gemini key>
 PS_API_KEY=<your process street api key>
 TOGETHER_API_KEY=<your together.ai key>
+# Optional database
+DATABASE_URL=postgres://user:pass@localhost:5432/db
 # Optional override
 TOGETHER_API_BASE=https://api.together.ai
 ```
@@ -25,3 +27,8 @@ Slides are generated and edited via the `/slides` routes.
 * `POST /slides/:id/revert` body `{ versionIndex: 0 }` → restores a previous version.
 
 Each slide tracks `chatHistory`, `currentHtml`, and `versionHistory` as it is edited.
+
+When `DATABASE_URL` is provided, generated slides are persisted with a run identifier. Additional endpoints become available:
+
+* `GET /slides/export/html/:runId` → downloads a consolidated HTML presentation for a run.
+* `GET /export/pptx/run/:runId` → generates a PPTX file from the stored slides.
