@@ -983,11 +983,8 @@ async function sowOrchestrator(brdText) {
 }
 // --- Configure Middleware & Routes ---
 app.use(cors());
-// Increase body size limits to handle large SOW payloads and slide requests
-// The previous 10mb limit was too small for some generate operations, causing
-// `PayloadTooLargeError` (HTTP 413) errors when large documents were sent.
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(fileUpload());
 app.use('/images/headshots', express.static(tempDir));
 
