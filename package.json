@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/dataAggregator.test.js && node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js && node tests/psCreateRunRoute.test.js && node tests/psListRunsRoute.test.js && node tests/togetherClient.test.js && node tests/togetherClientMalformed.test.js && node tests/aiProvider.test.js && node tests/aiProviderFailure.test.js"
+    "test": "node tests/dataAggregator.test.js && node tests/brandContext.test.js && node tests/psTasksRoute.test.js && node tests/psSingleTaskRoute.test.js && node tests/psTasksPagination.test.js && node tests/psCreateRunRoute.test.js && node tests/psListRunsRoute.test.js && node tests/togetherClient.test.js && node tests/togetherClientMalformed.test.js && node tests/aiProvider.test.js && node tests/aiProviderFailure.test.js && node tests/slideGenerator.test.js"
   },
   "author": "",
   "license": "ISC",
@@ -18,8 +18,8 @@
     "google-auth-library": "^9.11.0",
     "googleapis": "^137.1.0",
     "mammoth": "^1.7.2",
-    "pdf-parse": "^1.1.1",
     "md-to-pdf": "^5.1.0",
+    "pdf-parse": "^1.1.1",
     "pptxgenjs": "^3.9.0"
   }
 }
