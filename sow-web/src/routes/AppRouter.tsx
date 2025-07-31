@@ -4,6 +4,7 @@ import PreviewPage from '../pages/PreviewPage';
 import BrandingPage from '../pages/BrandingPage';
 import RunMarkdownPage from '../pages/RunMarkdownPage';
 import GeneratedSowPage from '../pages/GeneratedSowPage';
+import SlideEditorPage from '../pages/SlideEditorPage';
 
 export default function AppRouter() {
   return (
@@ -15,6 +16,7 @@ export default function AppRouter() {
         <Route path="/branding" element={<BrandingPage />} />
         <Route path="/run/:runId" element={<RunMarkdownPage />} />
         <Route path="/generated" element={<GeneratedSowPage />} />
+        <Route path="/slides" element={<SlideEditorPage />} />
       </Routes>
     </BrowserRouter>
   );
