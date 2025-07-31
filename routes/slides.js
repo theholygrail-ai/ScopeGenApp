@@ -2,7 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { generateSlidesFromMarkdown } = require('../services/slideGenerator');
 const { applySlideEdit, revertSlideToVersion } = require('../services/slideEditor');
-const { createRunWithSlides, persistSlideEdit, getSlidesByRun, normalizeSlideRow } = require('../services/slidePersistence');
+const {
+  createRunWithSlides,
+  persistSlideEdit,
+  getSlidesByRun,
+  getSlideWithHistory,
+  normalizeSlideRow,
+} = require('../services/slidePersistence');
 const { pool } = require('../services/db');
 const { brandContext } = require('../config/brandContext');
 
@@ -18,15 +24,15 @@ router.post('/generate', async (req, res) => {
     const slides = await generateSlidesFromMarkdown(fullSow, brandContext);
     if (useDb) {
       try {
-        const runId = await createRunWithSlides(fullSow, slides, req.userId || null);
-        res.json({ runId, slides });
+        const runId = await createRunWithSlides(fullSow, slides, null);
+        return res.json({ runId, slides });
       } catch (dbErr) {
         console.error('[SlideGeneration] db persist failed', dbErr);
-        res.status(500).json({ error: 'Slide persistence failed', detail: dbErr.message });
+        return res.status(500).json({ error: 'Slide persistence failed', detail: dbErr.message });
       }
     } else {
       slides.forEach(s => slideStore.set(s.id, s));
-      res.json({ slides });
+      return res.json({ slides });
     }
   } catch (err) {
     console.error('[SlideGeneration] failed', err);
@@ -42,20 +48,19 @@ router.post('/:slideId/edit', async (req, res) => {
     if (!instruction) return res.status(400).json({ error: 'instruction required' });
 
     if (useDb) {
-      const resSlide = await pool.query('SELECT * FROM slides WHERE id=$1', [slideId]);
-      if (resSlide.rowCount === 0) return res.status(404).json({ error: 'Slide not found' });
-      const slide = normalizeSlideRow(resSlide.rows[0]);
-      slide.versionHistory = [];
-      slide.chatHistory = [];
-      const updated = await applySlideEdit(slide, instruction);
-      await persistSlideEdit(slideId, updated.currentHtml, updated.versionHistory.slice(-1)[0].source, instruction, req.userId || null);
-      res.json({ slide: { id: slideId, currentHtml: updated.currentHtml } });
+      const slideWithHistory = await getSlideWithHistory(slideId);
+      if (!slideWithHistory) return res.status(404).json({ error: 'Slide not found' });
+
+      const updated = await applySlideEdit(slideWithHistory, instruction);
+      const lastVersion = updated.versionHistory.slice(-1)[0];
+      await persistSlideEdit(slideId, updated.currentHtml, lastVersion.source, instruction, null);
+      return res.json({ slide: { id: slideId, currentHtml: updated.currentHtml } });
     } else {
       const slide = slideStore.get(slideId);
       if (!slide) return res.status(404).json({ error: 'Slide not found' });
       const updated = await applySlideEdit(slide, instruction);
       slideStore.set(slideId, updated);
-      res.json({ slide: updated });
+      return res.json({ slide: updated });
     }
   } catch (err) {
     console.error('[SlideEdit] failed', err);
@@ -65,20 +70,20 @@ router.post('/:slideId/edit', async (req, res) => {
 
 // List versions of a slide
 router.get('/:slideId/versions', async (req, res) => {
-  const { slideId } = req.params;
-  if (useDb) {
-    try {
-      const rows = await pool.query('SELECT version_number, instruction, source, html, created_at FROM slide_versions WHERE slide_id=$1 ORDER BY version_number', [slideId]);
-      if (rows.rowCount === 0) return res.status(404).json({ error: 'Slide not found' });
-      res.json({ versions: rows.rows });
-    } catch (err) {
-      console.error('[SlideVersions] failed', err);
-      res.status(500).json({ error: 'Failed to fetch versions', detail: err.message });
+  try {
+    const { slideId } = req.params;
+    if (useDb) {
+      const slide = await getSlideWithHistory(slideId);
+      if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      return res.json({ versions: slide.versionHistory });
+    } else {
+      const slide = slideStore.get(slideId);
+      if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      return res.json({ versions: slide.versionHistory });
     }
-  } else {
-    const slide = slideStore.get(slideId);
-    if (!slide) return res.status(404).json({ error: 'Slide not found' });
-    res.json({ versions: slide.versionHistory });
+  } catch (err) {
+    console.error('[SlideVersions] failed', err);
+    res.status(500).json({ error: 'Failed to fetch versions', detail: err.message });
   }
 });
 
@@ -87,19 +92,25 @@ router.post('/:slideId/revert', async (req, res) => {
   try {
     const { slideId } = req.params;
     const { versionIndex } = req.body;
+    if (versionIndex === undefined) return res.status(400).json({ error: 'versionIndex required' });
+
     if (useDb) {
-      const versions = await pool.query('SELECT html, version_number FROM slide_versions WHERE slide_id=$1 ORDER BY version_number', [slideId]);
-      if (versions.rowCount === 0) return res.status(404).json({ error: 'Slide not found' });
-      if (versionIndex < 0 || versionIndex >= versions.rowCount) return res.status(400).json({ error: 'Invalid version index' });
-      const target = versions.rows[versionIndex];
-      await persistSlideEdit(slideId, target.html, 'revert', `Reverted to ${target.version_number}`, req.userId || null);
-      res.json({ slide: { id: slideId, currentHtml: target.html } });
+      const slide = await getSlideWithHistory(slideId);
+      if (!slide) return res.status(404).json({ error: 'Slide not found' });
+      if (versionIndex < 0 || versionIndex >= slide.versionHistory.length) {
+        return res.status(400).json({ error: 'Invalid version index' });
+      }
+
+      const target = slide.versionHistory[versionIndex];
+      const reverted = revertSlideToVersion(slide, versionIndex);
+      await persistSlideEdit(slideId, target.html, 'revert', `Reverted to version ${target.versionNumber}`, null);
+      return res.json({ slide: { id: slideId, currentHtml: target.html } });
     } else {
       const slide = slideStore.get(slideId);
       if (!slide) return res.status(404).json({ error: 'Slide not found' });
       const reverted = revertSlideToVersion(slide, versionIndex);
       slideStore.set(slideId, reverted);
-      res.json({ slide: reverted });
+      return res.json({ slide: reverted });
     }
   } catch (err) {
     console.error('[SlideRevert] failed', err);
@@ -120,7 +131,7 @@ router.get('/export/html/:runId', async (req, res) => {
 <body class="bg-gray-100 p-8">
 ${slides.map((s,i)=>`<section class="mb-12 p-6 bg-white rounded shadow">
   <h2 class="text-xl font-bold mb-4">Slide ${i+1}: ${s.title}</h2>
-  <div>${s.current_html}</div>
+  <div>${s.currentHtml}</div>
 </section>`).join('\n')}
 </body></html>`;
     res.setHeader('Content-Type','text/html');
