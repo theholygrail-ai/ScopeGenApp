@@ -1,5 +1,18 @@
 const { pool } = require('./db');
 
+function normalizeSlideRow(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    originalMarkdown: row.original_markdown,
+    currentHtml: row.current_html,
+    modelSource: row.model_source,
+    versionNumber: row.version_number,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 async function createRunWithSlides(fullMarkdown, slides, userId = null) {
   if (!pool) return null;
   const client = await pool.connect();
@@ -67,7 +80,7 @@ async function persistSlideEdit(slideId, updatedHtml, source, instruction, userI
 async function getSlidesByRun(runId) {
   if (!pool) return [];
   const res = await pool.query('SELECT * FROM slides WHERE run_id=$1 ORDER BY created_at', [runId]);
-  return res.rows;
+  return res.rows.map(normalizeSlideRow);
 }
 
-module.exports = { createRunWithSlides, persistSlideEdit, getSlidesByRun };
+module.exports = { createRunWithSlides, persistSlideEdit, getSlidesByRun, normalizeSlideRow };
