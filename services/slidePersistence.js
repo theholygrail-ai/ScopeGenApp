@@ -8,6 +8,8 @@ function normalizeSlideRow(row) {
     currentHtml: row.current_html,
     modelSource: row.model_source,
     versionNumber: row.version_number,
+    isLocked: row.is_locked || false,
+    finalizedAt: row.finalized_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -107,10 +109,60 @@ async function getSlideWithHistory(slideId) {
   return slide;
 }
 
+async function lockSlide(slideId, userId = null) {
+  if (!pool) throw new Error('DATABASE_URL not configured');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const res = await client.query(
+      'UPDATE slides SET is_locked=true, finalized_at=now(), updated_at=now() WHERE id=$1 RETURNING *',
+      [slideId]
+    );
+    if (res.rowCount === 0) throw new Error('Slide not found');
+    await client.query(
+      'INSERT INTO slide_edit_logs (slide_id, user_id, action) VALUES ($1,$2,$3)',
+      [slideId, userId, 'lock']
+    );
+    await client.query('COMMIT');
+    return normalizeSlideRow(res.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function unlockSlide(slideId, userId = null) {
+  if (!pool) throw new Error('DATABASE_URL not configured');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const res = await client.query(
+      'UPDATE slides SET is_locked=false, finalized_at=NULL, updated_at=now() WHERE id=$1 RETURNING *',
+      [slideId]
+    );
+    if (res.rowCount === 0) throw new Error('Slide not found');
+    await client.query(
+      'INSERT INTO slide_edit_logs (slide_id, user_id, action) VALUES ($1,$2,$3)',
+      [slideId, userId, 'unlock']
+    );
+    await client.query('COMMIT');
+    return normalizeSlideRow(res.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   createRunWithSlides,
   persistSlideEdit,
   getSlidesByRun,
   getSlideWithHistory,
   normalizeSlideRow,
+  lockSlide,
+  unlockSlide,
 };

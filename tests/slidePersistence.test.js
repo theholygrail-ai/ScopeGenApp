@@ -7,6 +7,8 @@ const {
   persistSlideEdit,
   getSlidesByRun,
   getSlideWithHistory,
+  lockSlide,
+  unlockSlide,
 } = require('../services/slidePersistence');
 
 // Test-only helper mirroring slideEditor.revertSlideToVersion. Keeps the
@@ -63,6 +65,14 @@ function revertSlideToVersion(slide, versionIndex) {
   await persistSlideEdit('s1', '<p>a2</p>', 'mock', 'edit2');
   slide = await getSlideWithHistory('s1');
   assert.strictEqual(slide.versionNumber, 3);
+
+  // lock
+  let locked = await lockSlide('s1');
+  assert.strictEqual(locked.isLocked, true);
+
+  // unlock
+  let unlocked = await unlockSlide('s1');
+  assert.strictEqual(unlocked.isLocked, false);
 
   // revert to version 0
   const revertedObj = revertSlideToVersion(slide, 0);
