@@ -14,3 +14,14 @@ TOGETHER_API_BASE=https://api.together.ai
 ```
 
 The `PS_API_KEY` is required for the `/ps/tasks/:runId` endpoint which lists tasks for a workflow run.
+
+## Slide Editing API
+
+Slides are generated and edited via the `/slides` routes.
+
+* `POST /slides/generate` body `{ fullSow: "markdown" }` → returns an array of slide objects with `id` and `currentHtml`.
+* `POST /slides/:id/edit` body `{ instruction: "Add teal header" }` → updates the slide and returns it.
+* `GET /slides/:id/versions` → lists prior versions of the slide HTML.
+* `POST /slides/:id/revert` body `{ versionIndex: 0 }` → restores a previous version.
+
+Each slide tracks `chatHistory`, `currentHtml`, and `versionHistory` as it is edited.
