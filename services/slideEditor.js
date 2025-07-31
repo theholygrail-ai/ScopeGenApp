@@ -1,6 +1,8 @@
 const { editWithFallback, generateWithFallback } = require('./aiProvider');
 const { sanitizeHtmlFragment } = require('./slideGenerator');
-const { logAiUsage } = require('../utils/logging');
+const { logAiUsage, logCacheMetric, hash } = require('../utils/logging');
+const { makeCacheKey, get: cacheGet, set: cacheSet } = require('./slideCache');
+const { brandContext } = require('../config/brandContext');
 
 function shouldCondense(history) {
   return Array.isArray(history) && history.length > 8;
@@ -43,6 +45,23 @@ function buildEditMessages(slide, userInstruction) {
 async function applySlideEdit(slide, userInstruction) {
   await condenseChatHistoryIfNeeded(slide);
   const messages = buildEditMessages(slide, userInstruction);
+  const cacheKey = makeCacheKey({ slideMarkdown: slide.currentHtml, brandingContext: brandContext, instruction: userInstruction, model: 'fallback' });
+  const cached = cacheGet(cacheKey);
+  if (cached) {
+    slide.versionHistory.push({
+      html: slide.currentHtml,
+      timestamp: Date.now(),
+      source: 'cache',
+      instruction: userInstruction,
+    });
+    slide.currentHtml = cached.html;
+    slide.versionNumber = slide.versionHistory.length;
+    slide.chatHistory.push({ role: 'user', content: userInstruction, timestamp: Date.now() });
+    slide.chatHistory.push({ role: 'assistant', content: cached.html, timestamp: Date.now() });
+    logCacheMetric({ hit: true, type: 'edit' });
+    return slide;
+  }
+
   const start = Date.now();
   const { text: updatedHtmlRaw, source } = await editWithFallback(messages);
   const duration = Date.now() - start;
@@ -58,6 +77,8 @@ async function applySlideEdit(slide, userInstruction) {
   slide.chatHistory.push({ role: 'user', content: userInstruction, timestamp: Date.now() });
   slide.chatHistory.push({ role: 'assistant', content: sanitized, timestamp: Date.now() });
   logAiUsage({ prompt: userInstruction, source, duration, outputLength: (updatedHtmlRaw || '').length });
+  logCacheMetric({ hit: false, type: 'edit' });
+  cacheSet(cacheKey, sanitized, { model: source, promptHash: hash(userInstruction), branding: brandContext });
   return slide;
 }
 
