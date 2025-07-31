@@ -11,16 +11,54 @@ function shouldCondense(history) {
 
 async function condenseChatHistoryIfNeeded(slide) {
   if (!shouldCondense(slide.chatHistory)) return;
+
+  const lastTwo = slide.chatHistory.slice(-2);
   const earlier = slide.chatHistory.slice(0, -2);
-  const summaryPrompt =
-    'You are an assistant that summarizes a conversation about editing an HTML slide. ' +
-    'Condense the following earlier messages into concise bullet points capturing what was changed or requested.\n' +
-    earlier.map(m => `${m.role}: ${m.content}`).join('\n') +
-    '\nProvide a summary in 3-5 bullets. Output only the bullets.';
-  const { text } = await generateWithFallback(summaryPrompt, { max_tokens: 200 });
+
+  const styleRubric =
+    'Style Rubric: Headings should be prominent using Tailwind (e.g., text-2xl font-bold), lists use proper spacing/bullets, responsive layout, no inline scripts, and clean semantic HTML.';
+
+  const fewShotExample = `\nExample:\nuser: Change the header to be larger and blue.\nassistant: <div class="text-2xl font-bold text-blue-600">Title</div>\nuser: Convert bullet list to checkmarks.\nassistant: <ul class="list-disc">...</ul>\n\nSummary of earlier changes should look like:\n- Made header larger and blue.\n- Converted bullet list to checkmarks.\n`;
+
+  const earlierFormatted = earlier
+    .map(m => `${m.role}: ${m.content.replace(/\n/g, ' ')}`)
+    .join('\n');
+
+  const summaryPrompt = `
+You are a conversation summarizer for slide edits. ${styleRubric}
+Condense the earlier messages into 3 to 5 concise bullet points capturing what was changed or requested. Do not include the last two messages; those will be preserved separately.
+${fewShotExample}
+Earlier messages:
+${earlierFormatted}
+
+Output only the bullet points, each starting with a dash.
+`.trim();
+
+  let summaryText = '';
+  try {
+    const start = Date.now();
+    const { text, source } = await generateWithFallback(summaryPrompt, { max_tokens: 250 });
+    const duration = Date.now() - start;
+
+    if (!text || !text.trim().startsWith('-')) {
+      // malformed summary, skip condensation
+      return;
+    }
+
+    summaryText = text.trim();
+    logAiUsage({ prompt: summaryPrompt, source: source || 'unknown', duration, outputLength: (text || '').length });
+  } catch (err) {
+    console.warn('[Summary] condensation failed, skipping. Error:', err.message);
+    return;
+  }
+
   slide.chatHistory = [
-    { role: 'system', content: `Summary of earlier edits: ${text}`, timestamp: Date.now() },
-    ...slide.chatHistory.slice(-2),
+    {
+      role: 'system',
+      content: `Summary of earlier edits:\n${summaryText}`,
+      timestamp: Date.now(),
+    },
+    ...lastTwo.map(m => ({ ...m })),
   ];
 }
 
