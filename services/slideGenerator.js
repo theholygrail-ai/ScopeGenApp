@@ -28,8 +28,17 @@ function chunkSowMarkdown(fullMarkdown) {
 
 function sanitizeHtmlFragment(html) {
   if (!html) return '';
+  let out = html.trim();
+  // Strip common code fences like ```html ... ``` or a leading "html" line
+  const fence = out.match(/^```\s*(?:html)?\s*\n([\s\S]*?)\n*```\s*$/i);
+  if (fence) {
+    out = fence[1].trim();
+  } else {
+    const prefix = out.match(/^html\s*\n([\s\S]*)/i);
+    if (prefix) out = prefix[1].trim();
+  }
   // Basic regex-based sanitization keeps behavior predictable for tests
-  return html
+  return out
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
     .replace(/javascript:/gi, '')
     .replace(/ on\w+="[^"]*"/gi, ' ');
