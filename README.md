@@ -16,6 +16,8 @@ TOGETHER_API_BASE=https://api.together.ai
 # Cache settings
 CACHE_TTL_MS=3600000
 ADMIN_TOKEN=changeme
+# Enable to print full AI prompts in logs
+DEBUG_PROMPTS=true
 ```
 
 The `PS_API_KEY` is required for the `/ps/tasks/:runId` endpoint which lists tasks for a workflow run.
