@@ -2,6 +2,12 @@ const assert = require('assert');
 const mockPool = require('./mockPool');
 require.cache[require.resolve('../services/db')] = { exports: { pool: mockPool } };
 
+const aiMock = {
+  editWithFallback: async () => ({ source: 'mock', text: '<p>edit</p>' }),
+  generateWithFallback: async () => ({ source: 'mock', text: '<p>gen</p>' })
+};
+require.cache[require.resolve('../services/aiProvider')] = { exports: aiMock };
+
 const {
   createRunWithSlides,
   getSlideWithHistory,

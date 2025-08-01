@@ -1009,6 +1009,13 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(fileUpload());
 app.use('/slides', slideRoutes);
+// expose slide route handlers directly for tests
+slideRoutes.stack.forEach(layer => {
+    if (!layer.route) return;
+    const path = '/slides' + (layer.route.path === '/' ? '' : layer.route.path);
+    const methods = Object.keys(layer.route.methods);
+    methods.forEach(m => app[m](path, layer.route.stack[0].handle));
+});
 app.get('/brandcontext', (req, res) => {
     res.json(brandContext);
 });

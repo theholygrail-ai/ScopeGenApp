@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api, generateSlides } from '../services/api';
 
@@ -53,6 +53,7 @@ export default function SlideEditorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [diff, setDiff] = useState<DiffPart[] | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -119,6 +120,17 @@ export default function SlideEditorPage() {
     return res.data.versions || [];
   };
 
+  useEffect(() => {
+    if (diff || !iframeRef.current || !selected) return;
+    const doc = iframeRef.current.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>\n` +
+      `<link rel="stylesheet" href="/tailwind.css">` +
+      `</head><body class="p-4">${selected.currentHtml}</body></html>`);
+    doc.close();
+  }, [selected, diff]);
+
   return (
     <div className="flex h-screen">
       <div className="w-1/5 border-r overflow-y-auto">
@@ -140,7 +152,7 @@ export default function SlideEditorPage() {
               ))}
             </div>
           ) : (
-            <div dangerouslySetInnerHTML={{ __html: selected?.currentHtml || '' }} />
+            <iframe ref={iframeRef} title="slide" className="w-full h-[70vh] border-none" />
           )}
         </div>
       </div>

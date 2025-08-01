@@ -40,7 +40,7 @@ Output only the bullet points, each starting with a dash.
     const { text, source } = await generateWithFallback(summaryPrompt, { max_tokens: 250 });
     const duration = Date.now() - start;
 
-    if (!text || !text.trim().startsWith('-')) {
+    if (!text || !/^[-\u2022]/.test(text.trim())) {
       // malformed summary, skip condensation
       return;
     }
@@ -84,8 +84,9 @@ function buildEditMessages(slide, userInstruction) {
 async function applySlideEdit(slide, userInstruction) {
   await condenseChatHistoryIfNeeded(slide);
   const messages = buildEditMessages(slide, userInstruction);
+  const sanitizedInput = sanitizeHtmlFragment(slide.currentHtml);
   const cacheKey = makeCacheKey({
-    slideMarkdown: slide.currentHtml,
+    slideMarkdown: sanitizedInput,
     brandingContext: brandContext,
     instruction: userInstruction,
     model: DEFAULT_MODEL,
@@ -122,7 +123,13 @@ async function applySlideEdit(slide, userInstruction) {
   slide.chatHistory.push({ role: 'assistant', content: sanitized, timestamp: Date.now() });
   logAiUsage({ prompt: userInstruction, source, duration, outputLength: (updatedHtmlRaw || '').length });
   logCacheMetric({ hit: false, type: 'edit' });
-  cacheSet(cacheKey, sanitized, { model: source, promptHash: hash(userInstruction), branding: brandContext });
+  const outKey = makeCacheKey({
+    slideMarkdown: sanitized,
+    brandingContext: brandContext,
+    instruction: userInstruction,
+    model: DEFAULT_MODEL,
+  });
+  cacheSet(outKey, sanitized, { model: source, promptHash: hash(userInstruction), branding: brandContext });
   return slide;
 }
 

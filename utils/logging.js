@@ -4,8 +4,15 @@ function hash(text) {
   return crypto.createHash('sha256').update(text).digest('hex');
 }
 
+const SHOW_FULL_PROMPTS = process.env.DEBUG_PROMPTS === 'true';
+
 function logAiUsage({ prompt, source, duration, outputLength }) {
-  console.info(`[AI] PromptHash=${hash(prompt)} Source=${source} DurationMs=${duration} OutputLength=${outputLength}`);
+  if (SHOW_FULL_PROMPTS) {
+    console.info(`[AI_PROMPT] ${prompt}`);
+  }
+  const promptField = SHOW_FULL_PROMPTS ? `Prompt` : `PromptHash`;
+  const promptValue = SHOW_FULL_PROMPTS ? prompt.replace(/\s+/g, ' ') : hash(prompt);
+  console.info(`[AI] ${promptField}=${promptValue} Source=${source} DurationMs=${duration} OutputLength=${outputLength}`);
 }
 
 let cacheHits = 0;
