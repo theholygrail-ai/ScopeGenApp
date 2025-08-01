@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+// Read the API base URL from the environment so deployments can
+// target different backends without modifying the source.
+const API_BASE_URL =
+  (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

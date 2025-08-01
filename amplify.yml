@@ -1,0 +1,17 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd sow-web
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: sow-web/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - sow-web/node_modules/**/*
