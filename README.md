@@ -52,4 +52,23 @@ module.exports.handler = serverless(app);
 
 Deploy `lambda.js` as a Lambda function and attach an API Gateway trigger.
 
+## AWS Amplify Deployment
+
+1. **Connect Repository** - In the AWS Amplify console create a new app and
+   connect this repository. Amplify will use `amplify.yml` to build the
+   frontend located in `sow-web`.
+2. **Package the Backend** - Run `npm run package-lambda` to create
+   `lambda.zip` containing the Express application and its dependencies.
+   Upload this archive as a Lambda function and set the handler to
+   `lambda.handler`.
+3. **Create API Gateway** - Add an HTTP API Gateway trigger for the Lambda
+   function and note the invoke URL. Configure environment variables in the
+   Lambda function to match `.env`.
+4. **Point the Frontend** - In Amplify add an environment variable
+   `VITE_API_BASE_URL` set to the API Gateway URL so the React app can reach the
+   backend.
+
+With these steps the SOW web frontend will be served by Amplify and all backend
+requests will be routed through the Lambda/API Gateway endpoint.
+
 
