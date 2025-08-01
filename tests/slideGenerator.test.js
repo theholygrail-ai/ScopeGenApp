@@ -27,3 +27,11 @@ const { generateSlidesFromMarkdown, chunkSowMarkdown, sanitizeHtmlFragment } = r
   assert(!/onclick/.test(clean));
   console.log('✅ slideGenerator works');
 })();
+
+(async () => {
+  const fenced = '```html\n<div>ok</div>\n```';
+  const withPrefix = 'html\n<p>test</p>';
+  assert.strictEqual(sanitizeHtmlFragment(fenced), '<div>ok</div>');
+  assert.strictEqual(sanitizeHtmlFragment(withPrefix), '<p>test</p>');
+  console.log('✅ sanitizer strips fences');
+})();
