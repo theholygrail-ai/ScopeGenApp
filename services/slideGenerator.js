@@ -37,24 +37,24 @@ function sanitizeHtmlFragment(html) {
 
 function buildSlidePrompt(slideMarkdown, brandContext) {
   return `
-You are a professional presentation designer. Convert the following Markdown content into a single HTML slide. 
-Use Tailwind CSS utility classes for clean, modern styling consistent with the brand. 
-Output only the HTML snippet. Do not include explanations or markdown.
+You are a Web Developer. Convert the following provided Markdown content into a single dynamic and engaging HTML slide presentation. 
+Ensure you Use Tailwind CSS utility classes for clean, modern and dynamic styling consistent with the brand and branding provided. 
+Ensure you Output only the HTML/css and tailwind snippet. Ensure that no explanations or markdown text is included in your output.
 
 Branding:
 - Brand Name: ${brandContext.brandName}
 - Tagline: ${brandContext.tagline}
 - Primary font: ${brandContext.fonts.primary} (fallback: ${brandContext.fonts.websafe})
 - Primary color: ${brandContext.palette.digitalTide}
-- Use responsive layout and semantic HTML.
+- Use a responsive layout.
 
 Requirements:
 * Headings should be prominent using Tailwind classes (e.g., text-2xl font-bold, mb-4).
-* Lists should be styled with appropriate spacing and custom bullet (you can use icons or styled list markers).
+* Lists should be styled with appropriate spacing and custom bullet with icons or styled list markers).
 * Include spacing between sections (e.g., use mb-6, p-4).
 * If the slide contains stakeholder information, format it as a responsive grid.
 * Avoid inline scripts. Only use Tailwind utility classes.
-* Keep markup minimal but visually clear.
+* Ensure that your output is a dynamic presentation slide that is client ready and impressive
 
 Slide content:
 ${slideMarkdown}
