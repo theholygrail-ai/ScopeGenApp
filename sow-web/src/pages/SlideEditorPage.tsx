@@ -126,7 +126,7 @@ export default function SlideEditorPage() {
     if (!doc) return;
     doc.open();
     doc.write(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>\n` +
-      `<script src="https://cdn.tailwindcss.com"></script>` +
+      `<link rel="stylesheet" href="/tailwind.css">` +
       `</head><body class="p-4">${selected.currentHtml}</body></html>`);
     doc.close();
   }, [selected, diff]);
