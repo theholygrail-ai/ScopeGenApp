@@ -38,3 +38,17 @@ When `DATABASE_URL` is provided, generated slides are persisted with a run ident
 
 * `GET /slides/export/html/:runId` → downloads a consolidated HTML presentation for a run.
 * `GET /export/pptx/run/:runId` → generates a PPTX file from the stored slides using their latest HTML.
+## Lambda Deployment
+
+To run the Express app on AWS Lambda with API Gateway, install `serverless-http` and create `lambda.js`:
+
+```js
+const serverless = require('serverless-http');
+const app = require('./server');
+
+module.exports.handler = serverless(app);
+```
+
+Deploy `lambda.js` as a Lambda function and attach an API Gateway trigger.
+
+

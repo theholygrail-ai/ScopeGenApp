@@ -21,9 +21,9 @@
     "mammoth": "^1.7.2",
     "md-to-pdf": "^5.1.0",
     "pdf-parse": "^1.1.1",
-    "sanitize-html": "^2.12.1",
+    "pg": "^8.11.3",
     "pptxgenjs": "^3.9.0",
-    "pg": "^8.11.3"
+    "sanitize-html": "^2.12.1",
+    "serverless-http": "^3.3.0"
   }
 }
-
