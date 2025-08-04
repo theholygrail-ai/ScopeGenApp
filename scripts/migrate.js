@@ -1,3 +1,5 @@
+// Placeholder migration runner used during Lambda deployments.
+// The real logic can be expanded as the application evolves.
 const fs = require('fs');
 const path = require('path');
 const { pool } = require('../services/db');
