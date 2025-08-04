@@ -47,13 +47,21 @@ async function getPricingSheetData(retries = 3) {
     const rawCredentials = process.env.GOOGLE_CREDENTIALS;
     let authOptions;
     if (rawCredentials) {
+        let creds;
         try {
-            const creds = JSON.parse(rawCredentials.replace(/\\n/g, '\n'));
-            authOptions = { credentials: creds, scopes: 'https://www.googleapis.com/auth/spreadsheets' };
+            // First attempt to parse as plain JSON with escaped newlines
+            creds = JSON.parse(rawCredentials.replace(/\\n/g, '\n'));
         } catch (e) {
-            console.error('Failed to parse GOOGLE_CREDENTIALS JSON:', e.message);
-            throw new Error('Invalid GOOGLE_CREDENTIALS environment variable.');
+            try {
+                // If direct parse fails, attempt base64 decoding then parse
+                const decoded = Buffer.from(rawCredentials, 'base64').toString('utf8');
+                creds = JSON.parse(decoded.replace(/\\n/g, '\n'));
+            } catch (err) {
+                console.error('Failed to parse GOOGLE_CREDENTIALS JSON:', err.message);
+                throw new Error('Invalid GOOGLE_CREDENTIALS environment variable. Ensure it is valid JSON or base64-encoded JSON.');
+            }
         }
+        authOptions = { credentials: creds, scopes: 'https://www.googleapis.com/auth/spreadsheets' };
     } else {
         authOptions = { keyFile: 'credentials.json', scopes: 'https://www.googleapis.com/auth/spreadsheets' };
     }
