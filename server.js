@@ -47,14 +47,17 @@ async function getPricingSheetData(retries = 3) {
     const rawCredentials = process.env.GOOGLE_CREDENTIALS;
     let authOptions;
     if (rawCredentials) {
+        const cleanedCreds = rawCredentials
+            .trim()
+            .replace(new RegExp('^\\uFEFF'), ''); // remove BOM if present
         let creds;
         try {
             // First attempt to parse as plain JSON with escaped newlines
-            creds = JSON.parse(rawCredentials.replace(/\\n/g, '\n'));
+            creds = JSON.parse(cleanedCreds.replace(/\\n/g, '\n'));
         } catch (e) {
             try {
                 // If direct parse fails, attempt base64 decoding then parse
-                const decoded = Buffer.from(rawCredentials, 'base64').toString('utf8');
+                const decoded = Buffer.from(cleanedCreds, 'base64').toString('utf8');
                 creds = JSON.parse(decoded.replace(/\\n/g, '\n'));
             } catch (err) {
                 console.error('Failed to parse GOOGLE_CREDENTIALS JSON:', err.message);
