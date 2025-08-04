@@ -15,6 +15,7 @@ const files = [
   'templates',
   'migrations',
   'brandingAssets',
+  // Ensure migration script is included in the Lambda bundle
   'scripts/migrate.js',
   'node_modules'
 ];
