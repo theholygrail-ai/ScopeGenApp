@@ -1150,6 +1150,12 @@ app.get('/ps/runs', async (req, res) => {
   const url = `${PS_BASE_URL}/workflow-runs?workflowId=${encodeURIComponent(workflowId)}`;
   try {
     const psRes = await fetch(url, { headers: { 'X-API-Key': PS_API_KEY } });
+    // The Process Street API may return 204 when no runs exist. Avoid parsing
+    // an empty body which would otherwise throw a JSON error and surface as a
+    // 500 to the client.
+    if (psRes.status === 204) {
+      return res.json([]);
+    }
     if (!psRes.ok) return res.status(psRes.status).json({ error: psRes.statusText });
     const { workflowRuns } = await psRes.json();
     return res.json(workflowRuns);
