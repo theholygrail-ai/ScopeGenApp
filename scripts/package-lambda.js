@@ -15,6 +15,7 @@ const files = [
   'templates',
   'migrations',
   'brandingAssets',
+  'scripts/migrate.js',
   'node_modules'
 ];
 
