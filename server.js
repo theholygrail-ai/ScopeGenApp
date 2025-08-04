@@ -1150,7 +1150,14 @@ app.get('/ps/runs', async (req, res) => {
   const url = `${PS_BASE_URL}/workflow-runs?workflowId=${encodeURIComponent(workflowId)}`;
   try {
     const psRes = await fetch(url, { headers: { 'X-API-Key': PS_API_KEY } });
-    if (!psRes.ok) return res.status(psRes.status).json({ error: psRes.statusText });
+    if (!psRes.ok) {
+      const body = await psRes.text();
+      console.error('❌ PS API error listing workflow runs:', psRes.status, body);
+      return res.status(psRes.status).json({
+        error: 'Plan Service API request failed',
+        details: body
+      });
+    }
     const { workflowRuns } = await psRes.json();
     return res.json(workflowRuns);
   } catch (err) {
