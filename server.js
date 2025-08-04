@@ -44,10 +44,20 @@ if (pool && process.env.RUN_MIGRATIONS === 'true') {
 // --- Google Sheets Integration ---
 async function getPricingSheetData(retries = 3) {
     console.log('[Data Ingestion] Authenticating with Google Sheets...');
-    const auth = new GoogleAuth({
-        keyFile: 'credentials.json',
-        scopes: 'https://www.googleapis.com/auth/spreadsheets',
-    });
+    const rawCredentials = process.env.GOOGLE_CREDENTIALS;
+    let authOptions;
+    if (rawCredentials) {
+        try {
+            const creds = JSON.parse(rawCredentials.replace(/\\n/g, '\n'));
+            authOptions = { credentials: creds, scopes: 'https://www.googleapis.com/auth/spreadsheets' };
+        } catch (e) {
+            console.error('Failed to parse GOOGLE_CREDENTIALS JSON:', e.message);
+            throw new Error('Invalid GOOGLE_CREDENTIALS environment variable.');
+        }
+    } else {
+        authOptions = { keyFile: 'credentials.json', scopes: 'https://www.googleapis.com/auth/spreadsheets' };
+    }
+    const auth = new GoogleAuth(authOptions);
 
     const client = await auth.getClient();
     const googleSheets = google.sheets({ version: 'v4', auth: client });
@@ -86,7 +96,7 @@ async function getPricingSheetData(retries = 3) {
                 } else if (error.code === 404) {
                     console.error(`This might mean the spreadsheet ID "${process.env.GOOGLE_SHEET_ID}" is incorrect.`);
                 }
-                console.error("Please ensure 'credentials.json' exists and the GOOGLE_SHEET_ID/GOOGLE_SHEET_NAME are correct in .env.");
+                console.error("Please ensure service account credentials are provided via the GOOGLE_CREDENTIALS env variable or 'credentials.json', and the GOOGLE_SHEET_ID/GOOGLE_SHEET_NAME are correct in .env.");
                 throw new Error("Could not fetch pricing data from Google Sheets.");
             }
             await new Promise(res => setTimeout(res, 1500));
