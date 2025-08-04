@@ -47,22 +47,25 @@ async function getPricingSheetData(retries = 3) {
     const rawCredentials = process.env.GOOGLE_CREDENTIALS;
     let authOptions;
     if (rawCredentials) {
-        const cleanedCreds = rawCredentials
+        let cleanedCreds = rawCredentials
             .trim()
             .replace(new RegExp('^\\uFEFF'), ''); // remove BOM if present
+
+        // Remove wrapping quotes if the value was provided as a quoted string
+        if ((cleanedCreds.startsWith('"') && cleanedCreds.endsWith('"')) ||
+            (cleanedCreds.startsWith("'") && cleanedCreds.endsWith("'"))) {
+            cleanedCreds = cleanedCreds.slice(1, -1);
+        }
+
+        // Convert escaped newline characters to real newlines
+        cleanedCreds = cleanedCreds.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+
         let creds;
         try {
-            // First attempt to parse as plain JSON with escaped newlines
-            creds = JSON.parse(cleanedCreds.replace(/\\n/g, '\n'));
-        } catch (e) {
-            try {
-                // If direct parse fails, attempt base64 decoding then parse
-                const decoded = Buffer.from(cleanedCreds, 'base64').toString('utf8');
-                creds = JSON.parse(decoded.replace(/\\n/g, '\n'));
-            } catch (err) {
-                console.error('Failed to parse GOOGLE_CREDENTIALS JSON:', err.message);
-                throw new Error('Invalid GOOGLE_CREDENTIALS environment variable. Ensure it is valid JSON or base64-encoded JSON.');
-            }
+            creds = JSON.parse(cleanedCreds);
+        } catch (err) {
+            console.error('Failed to parse GOOGLE_CREDENTIALS JSON:', err.message);
+            throw new Error('Invalid GOOGLE_CREDENTIALS environment variable. Ensure it is a valid JSON string.');
         }
         authOptions = { credentials: creds, scopes: 'https://www.googleapis.com/auth/spreadsheets' };
     } else {
