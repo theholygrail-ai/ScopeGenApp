@@ -44,10 +44,31 @@ if (pool && process.env.RUN_MIGRATIONS === 'true') {
 // --- Google Sheets Integration ---
 async function getPricingSheetData(retries = 3) {
     console.log('[Data Ingestion] Authenticating with Google Sheets...');
-    const auth = new GoogleAuth({
-        keyFile: 'credentials.json',
-        scopes: 'https://www.googleapis.com/auth/spreadsheets',
-    });
+    const rawCredentials = process.env.GOOGLE_CREDENTIALS;
+    let authOptions;
+    if (rawCredentials) {
+        const cleanedCreds = rawCredentials
+            .trim()
+            .replace(new RegExp('^\\uFEFF'), ''); // remove BOM if present
+        let creds;
+        try {
+            // If the string is wrapped in quotes, strip them first
+            const unwrapped =
+                cleanedCreds.startsWith('"') && cleanedCreds.endsWith('"')
+                    ? cleanedCreds.slice(1, -1)
+                    : cleanedCreds;
+            // Some callers may pass the inner object without braces
+            const jsonString = unwrapped.trim().startsWith('{') ? unwrapped : `{${unwrapped}}`;
+            creds = JSON.parse(jsonString);
+        } catch (err) {
+            console.error('Failed to parse GOOGLE_CREDENTIALS string:', err.message);
+            throw new Error('Invalid GOOGLE_CREDENTIALS environment variable. Ensure it is a valid JSON string.');
+        }
+        authOptions = { credentials: creds, scopes: 'https://www.googleapis.com/auth/spreadsheets' };
+    } else {
+        authOptions = { keyFile: 'credentials.json', scopes: 'https://www.googleapis.com/auth/spreadsheets' };
+    }
+    const auth = new GoogleAuth(authOptions);
 
     const client = await auth.getClient();
     const googleSheets = google.sheets({ version: 'v4', auth: client });
@@ -86,7 +107,7 @@ async function getPricingSheetData(retries = 3) {
                 } else if (error.code === 404) {
                     console.error(`This might mean the spreadsheet ID "${process.env.GOOGLE_SHEET_ID}" is incorrect.`);
                 }
-                console.error("Please ensure 'credentials.json' exists and the GOOGLE_SHEET_ID/GOOGLE_SHEET_NAME are correct in .env.");
+                console.error("Please ensure service account credentials are provided via the GOOGLE_CREDENTIALS env variable or 'credentials.json', and the GOOGLE_SHEET_ID/GOOGLE_SHEET_NAME are correct in .env.");
                 throw new Error("Could not fetch pricing data from Google Sheets.");
             }
             await new Promise(res => setTimeout(res, 1500));
@@ -1004,7 +1025,21 @@ async function sowOrchestrator(brdText, brandContext) {
     return finalMarkdown;
 }
 // --- Configure Middleware & Routes ---
-app.use(cors());
+// Configure CORS to allow the frontend apps to access the API through API
+// Gateway. Allowed origins can be provided as a comma-separated list via the
+// CORS_ORIGIN environment variable, otherwise all origins are permitted (useful
+// for local testing).
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : '*';
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-admin-token'],
+    maxAge: 600,
+  })
+);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(fileUpload());
@@ -1136,7 +1171,14 @@ app.get('/ps/runs', async (req, res) => {
   const url = `${PS_BASE_URL}/workflow-runs?workflowId=${encodeURIComponent(workflowId)}`;
   try {
     const psRes = await fetch(url, { headers: { 'X-API-Key': PS_API_KEY } });
-    if (!psRes.ok) return res.status(psRes.status).json({ error: psRes.statusText });
+    if (!psRes.ok) {
+      const body = await psRes.text();
+      console.error('❌ PS API error listing workflow runs:', psRes.status, body);
+      return res.status(psRes.status).json({
+        error: 'Plan Service API request failed',
+        details: body
+      });
+    }
     const { workflowRuns } = await psRes.json();
     return res.json(workflowRuns);
   } catch (err) {
