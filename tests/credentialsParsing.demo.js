@@ -3,23 +3,24 @@ const assert = require('assert');
 function parseGoogleCredentials(raw) {
   const cleaned = raw.trim().replace(/^\uFEFF/, '');
   try {
-    return JSON.parse(cleaned);
-  } catch (e) {
-    try {
-      const decoded = Buffer.from(cleaned, 'base64').toString('utf8');
-      const sanitized = decoded.trim().replace(/^\uFEFF/, '');
-      return JSON.parse(sanitized);
-    } catch (err) {
-      console.error('Failed to parse GOOGLE_CREDENTIALS JSON:', err.message);
-      throw new Error('Invalid GOOGLE_CREDENTIALS environment variable. Ensure it is valid JSON or base64-encoded JSON.');
-    }
+    const unwrapped =
+      cleaned.startsWith('"') && cleaned.endsWith('"')
+        ? cleaned.slice(1, -1)
+        : cleaned;
+    const jsonString = unwrapped.trim().startsWith('{') ? unwrapped : `{${unwrapped}}`;
+    return JSON.parse(jsonString);
+  } catch (err) {
+    console.error('Failed to parse GOOGLE_CREDENTIALS string:', err.message);
+    throw new Error('Invalid GOOGLE_CREDENTIALS environment variable. Ensure it is a valid JSON string.');
   }
 }
 
-const sample = JSON.stringify({ project_id: 'demo-project', private_key: 'dummy' });
-const base64 = Buffer.from(sample, 'utf8').toString('base64');
+const sampleObj = { project_id: 'demo-project', private_key: 'dummy' };
+const sample = JSON.stringify(sampleObj);
+const inner = sample.slice(1, -1); // remove surrounding braces
+const wrapped = `"${inner}"`;
 
-assert.deepStrictEqual(parseGoogleCredentials(sample), JSON.parse(sample));
-assert.deepStrictEqual(parseGoogleCredentials(base64), JSON.parse(sample));
+assert.deepStrictEqual(parseGoogleCredentials(sample), sampleObj);
+assert.deepStrictEqual(parseGoogleCredentials(wrapped), sampleObj);
 
-console.log('Credential parsing succeeded for both plain JSON and base64 inputs.');
+console.log('Credential parsing succeeded for both plain JSON and quoted inner object strings.');
