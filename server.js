@@ -1004,7 +1004,21 @@ async function sowOrchestrator(brdText, brandContext) {
     return finalMarkdown;
 }
 // --- Configure Middleware & Routes ---
-app.use(cors());
+// Configure CORS to allow the frontend apps to access the API through API
+// Gateway. Allowed origins can be provided as a comma-separated list via the
+// CORS_ORIGIN environment variable, otherwise all origins are permitted (useful
+// for local testing).
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : '*';
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-admin-token'],
+    maxAge: 600,
+  })
+);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(fileUpload());

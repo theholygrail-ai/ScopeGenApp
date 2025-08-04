@@ -3,7 +3,7 @@ Used to convert BRD into client ready SOW
 
 ## Environment Variables
 
-Create a `.env` file with the following entries:
+Create a `.env` file with the following entries for the backend:
 
 ```
 GEMINI_API_KEY=<your gemini key>
@@ -16,11 +16,29 @@ TOGETHER_API_BASE=https://api.together.ai
 # Cache settings
 CACHE_TTL_MS=3600000
 ADMIN_TOKEN=changeme
+# CORS configuration
+CORS_ORIGIN=https://your-frontend-domain.example.com
 ```
 
 The `PS_API_KEY` is required for the `/ps/tasks/:runId` endpoint which lists tasks for a workflow run.
 
-An admin endpoint `POST /admin/cache/clear` clears the in-memory slide cache and resets metrics. Send the `x-admin-token` header matching `ADMIN_TOKEN`.
+### Frontend
+
+The web frontend reads its backend URL from `VITE_API_BASE_URL`. Set this
+environment variable in the Amplify build or your local `.env` file to point to
+the deployed API Gateway URL. Two example stages are:
+
+```
+Staging:   https://wiztvffuyg.execute-api.us-east-1.amazonaws.com/staging
+Production: https://wiztvffuyg.execute-api.us-east-1.amazonaws.com/production
+```
+
+An optional `VITE_ADMIN_TOKEN` can be provided to enable admin UI features. It
+is sent as the `x-admin-token` header when calling admin routes such as
+`POST /admin/cache/clear`.
+
+An admin endpoint `POST /admin/cache/clear` clears the in-memory slide cache and
+resets metrics. Send the `x-admin-token` header matching `ADMIN_TOKEN`.
 
 ## Slide Editing API
 
@@ -69,5 +87,24 @@ Deploy `lambda.js` as a Lambda function and attach an API Gateway trigger.
 
 With these steps the SOW web frontend will be served by Amplify and all backend
 requests will be routed through the Lambda/API Gateway endpoint.
+
+## Manual Testing
+
+To verify the API stages directly:
+
+```
+curl -i "https://wiztvffuyg.execute-api.us-east-1.amazonaws.com/staging/ps/runs?workflowId=<some-id>"
+curl -i "https://wiztvffuyg.execute-api.us-east-1.amazonaws.com/production/ps/runs?workflowId=<some-id>"
+```
+
+Admin routes require the token header:
+
+```
+curl -i -H "x-admin-token: <token>" "https://wiztvffuyg.execute-api.us-east-1.amazonaws.com/staging/admin/cache/clear"
+```
+
+When the frontend is deployed, open the browser console to confirm a log similar
+to `Resolved API base URL: https://.../staging`. Network requests such as
+`/ps/runs` should hit the same base URL and return data without CORS errors.
 
 
