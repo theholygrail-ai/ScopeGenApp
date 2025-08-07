@@ -29,14 +29,36 @@ function chunkSowMarkdown(fullMarkdown) {
 function sanitizeHtmlFragment(html) {
   if (!html) return '';
   let out = html.trim();
-  // Strip common code fences like ```html ... ``` or a leading "html" line
-  const fence = out.match(/^```\s*(?:html)?\s*\n([\s\S]*?)\n*```\s*$/i);
-  if (fence) {
-    out = fence[1].trim();
+
+  // Locate first fenced block if present and extract its contents
+  const firstFence = out.indexOf('```');
+  if (firstFence !== -1) {
+    out = out.slice(firstFence + 3); // drop opening ```
+    // remove optional language like html
+    out = out.replace(/^\s*html\s*\n/i, '');
+    const secondFence = out.indexOf('```');
+    if (secondFence !== -1) {
+      out = out.slice(0, secondFence);
+    }
   } else {
+    // handle leading "html" prefix without fences
     const prefix = out.match(/^html\s*\n([\s\S]*)/i);
-    if (prefix) out = prefix[1].trim();
+    if (prefix) out = prefix[1];
   }
+
+  out = out.trim();
+
+  // Strip any trailing explanations after the HTML snippet
+  const closingTagMatch = out.match(/([\s\S]*<\/[^>]+>)/);
+  if (closingTagMatch) {
+    out = closingTagMatch[1];
+  } else {
+    const lastGt = out.lastIndexOf('>');
+    if (lastGt !== -1) out = out.slice(0, lastGt + 1);
+  }
+
+  out = out.replace(/```/g, '').trim();
+
   // Basic regex-based sanitization keeps behavior predictable for tests
   return out
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')

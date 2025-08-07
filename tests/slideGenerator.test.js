@@ -35,3 +35,15 @@ const { generateSlidesFromMarkdown, chunkSowMarkdown, sanitizeHtmlFragment } = r
   assert.strictEqual(sanitizeHtmlFragment(withPrefix), '<p>test</p>');
   console.log('✅ sanitizer strips fences');
 })();
+
+(async () => {
+  const trailing = '```html\n<div>ok</div>\n```\nHere is more info';
+  const preceding = 'Take this:\n```html\n<div>ok</div>\n```';
+  const unclosed = '```html\n<div>ok</div>\nExtra words';
+  const sameLine = '<div>ok</div> thanks';
+  assert.strictEqual(sanitizeHtmlFragment(trailing), '<div>ok</div>');
+  assert.strictEqual(sanitizeHtmlFragment(preceding), '<div>ok</div>');
+  assert.strictEqual(sanitizeHtmlFragment(unclosed), '<div>ok</div>');
+  assert.strictEqual(sanitizeHtmlFragment(sameLine), '<div>ok</div>');
+  console.log('✅ sanitizer handles model variants');
+})();
