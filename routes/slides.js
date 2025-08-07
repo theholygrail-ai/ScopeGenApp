@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { generateSlidesFromMarkdown } = require('../services/slideGenerator');
+const { chunkSowMarkdown } = require('../services/slideGenerator');
+const { generateSlidesAgentically } = require('../services/slideGenerationAgent');
 const { applySlideEdit, revertSlideToVersion } = require('../services/slideEditor');
 const {
   createRunWithSlides,
@@ -23,7 +24,11 @@ router.post('/generate', async (req, res) => {
     const { fullSow } = req.body;
     if (!fullSow) return res.status(400).json({ error: 'fullSow markdown is required' });
 
-    const slides = await generateSlidesFromMarkdown(fullSow, brandContext);
+    const slideSpecs = chunkSowMarkdown(fullSow);
+    const slides = [];
+    for await (const slide of generateSlidesAgentically(slideSpecs, brandContext)) {
+      slides.push(slide);
+    }
     slides.forEach(s => { if (!s.versionNumber) s.versionNumber = 1; });
     if (useDb) {
       try {
