@@ -126,10 +126,14 @@ export default function SlideEditorPage() {
     if (diff || !iframeRef.current || !selected) return;
     const doc = iframeRef.current.contentDocument;
     if (!doc) return;
+    const tailwindUrl = new URL('/tailwind.css', window.location.origin).toString();
     doc.open();
-    doc.write(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>\n` +
-      `<link rel="stylesheet" href="/tailwind.css">` +
-      `</head><body class="p-4">${selected.currentHtml}</body></html>`);
+    doc.write(
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>` +
+        `<meta name="viewport" content="width=device-width, initial-scale=1"/>` +
+        `<link rel="stylesheet" href="${tailwindUrl}">` +
+        `</head><body class="p-4">${selected.currentHtml}</body></html>`
+    );
     doc.close();
   }, [selected, diff]);
 
