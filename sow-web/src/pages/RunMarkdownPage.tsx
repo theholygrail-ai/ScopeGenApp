@@ -8,6 +8,9 @@ export default function RunMarkdownPage() {
   const [markdown, setMarkdown] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const defaultPrompt =
+    'Generate a detailed SOW Presentation using the following Markdown and attached branding as a guide on UI, ensure each slide is dynamic in its design but aligns with the branding guidelines: Markdown:';
+  const [prompt, setPrompt] = useState(defaultPrompt);
 
   useEffect(() => {
     const fetchMarkdown = async () => {
@@ -32,6 +35,10 @@ export default function RunMarkdownPage() {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(markdown);
+  };
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(prompt);
   };
 
   const handleBack = () => {
@@ -60,6 +67,19 @@ export default function RunMarkdownPage() {
       <div className="flex items-center justify-between mb-4">
         <button className="text-blue-600" onClick={handleBack}>&larr; Back</button>
         <h1 className="text-2xl font-bold">Run Markdown</h1>
+      </div>
+      <textarea
+        className="w-full border p-2 h-24 mb-2"
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+      />
+      <div className="mb-4">
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded"
+          onClick={handleCopyPrompt}
+        >
+          Copy Prompt
+        </button>
       </div>
       <textarea
         className="w-full border p-2 h-96 mb-4"
