@@ -127,14 +127,27 @@ export default function SlideEditorPage() {
     const doc = iframeRef.current.contentDocument;
     if (!doc) return;
     const tailwindUrl = new URL('/tailwind.css', window.location.origin).toString();
-    doc.open();
-    doc.write(
-      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>` +
-        `<meta name="viewport" content="width=device-width, initial-scale=1"/>` +
-        `<link rel="stylesheet" href="${tailwindUrl}">` +
-        `</head><body class="p-4">${selected.currentHtml}</body></html>`
-    );
-    doc.close();
+    const html =
+      selected.currentHtml && selected.currentHtml.trim()
+        ? selected.currentHtml
+        : '<p>No HTML snippet available</p>';
+    try {
+      doc.open();
+      doc.write(
+        `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>` +
+          `<meta name="viewport" content="width=device-width, initial-scale=1"/>` +
+          `<link rel="stylesheet" href="${tailwindUrl}">` +
+          `</head><body class="p-4">${html}</body></html>`
+      );
+    } catch (err) {
+      setError('Failed to render slide');
+      doc.open();
+      doc.write(
+        `<!DOCTYPE html><html lang="en"><body class="p-4"><p>Failed to render content</p></body></html>`
+      );
+    } finally {
+      doc.close();
+    }
   }, [selected, diff]);
 
   return (
