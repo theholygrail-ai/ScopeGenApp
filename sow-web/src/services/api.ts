@@ -44,6 +44,52 @@ export const generateSlides = async (fullSow: string) => {
   return data.slides;
 };
 
+export const streamSlides = (
+  fullSow: string,
+  onSlide: (slide: any) => void,
+  onDone?: (runId?: string) => void
+) => {
+  const controller = new AbortController();
+  fetch(`${API_BASE_URL}/slides/generate/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fullSow }),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+        for (const part of parts) {
+          const lines = part.split('\n');
+          let event = 'message';
+          let data = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) event = line.replace('event:', '').trim();
+            else if (line.startsWith('data:')) data += line.replace('data:', '').trim();
+          }
+          if (event === 'done') {
+            const parsed = data ? JSON.parse(data) : {};
+            onDone?.(parsed.runId);
+          } else if (event === 'error') {
+            console.error('Slide stream error', data);
+          } else if (data) {
+            onSlide(JSON.parse(data));
+          }
+        }
+      }
+    })
+    .catch((err) => console.error('Slide stream failed', err));
+  return controller;
+};
+
 export const editSlide = async (id: string, instruction: string) => {
   const { data } = await api.post(`/slides/${id}/edit`, { instruction });
   return data.slide;

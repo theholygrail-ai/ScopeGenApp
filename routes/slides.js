@@ -48,6 +48,59 @@ router.post('/generate', async (req, res) => {
   }
 });
 
+// Stream slide generation using Server-Sent Events
+router.post('/generate/stream', async (req, res) => {
+  try {
+    const { fullSow } = req.body;
+    if (!fullSow) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'fullSow markdown is required' }));
+    }
+
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders && res.flushHeaders();
+
+    const slideSpecs = chunkSowMarkdown(fullSow);
+    const slides = [];
+
+    try {
+      for await (const slide of generateSlidesAgentically(slideSpecs, brandContext)) {
+        if (!slide.versionNumber) slide.versionNumber = 1;
+        slides.push(slide);
+        res.write(`data: ${JSON.stringify(slide)}\n\n`);
+      }
+
+      if (useDb) {
+        try {
+          const runId = await createRunWithSlides(fullSow, slides, null);
+          res.write(`event: done\ndata: ${JSON.stringify({ runId })}\n\n`);
+        } catch (dbErr) {
+          console.error('[SlideGenerationStream] db persist failed', dbErr);
+          res.write(
+            `event: error\ndata: ${JSON.stringify({ error: 'Slide persistence failed', detail: dbErr.message })}\n\n`
+          );
+        }
+      } else {
+        slides.forEach(s => slideStore.set(s.id, s));
+        res.write(`event: done\ndata: {}\n\n`);
+      }
+    } catch (streamErr) {
+      console.error('[SlideGenerationStream] failed during generation', streamErr);
+      res.write(
+        `event: error\ndata: ${JSON.stringify({ error: 'Slide generation failed', detail: streamErr.message })}\n\n`
+      );
+    }
+
+    res.end();
+  } catch (err) {
+    console.error('[SlideGenerationStream] failed', err);
+    res.status(500).json({ error: 'Slide generation failed', detail: err.message });
+  }
+});
+
 // Fetch a single slide with history
 router.get('/:slideId', async (req, res) => {
   try {
