@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { api, generateSlides } from '../services/api';
+import { api, streamSlides } from '../services/api';
 
 interface Slide {
   id: string;
@@ -56,24 +56,26 @@ export default function SlideEditorPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    const init = async () => {
-      const passed = (location.state as any) || {};
-      if (passed.slides && passed.slides.length) {
-        setSlides(passed.slides);
-        setSelected(passed.slides[0]);
-        return;
-      }
-      if (passed.markdown) {
-        try {
-          const newSlides = await generateSlides(passed.markdown);
-          setSlides(newSlides);
-          setSelected(newSlides[0]);
-        } catch (err) {
-          setError('Failed to load slides');
-        }
-      }
-    };
-    init();
+    const passed = (location.state as any) || {};
+    if (passed.slides && passed.slides.length) {
+      setSlides(passed.slides);
+      setSelected(passed.slides[0]);
+      return;
+    }
+    if (passed.markdown) {
+      const controller = streamSlides(
+        passed.markdown,
+        (slide) => {
+          setSlides((prev) => {
+            const next = [...prev, slide];
+            if (next.length === 1) setSelected(slide);
+            return next;
+          });
+        },
+        () => {}
+      );
+      return () => controller.abort();
+    }
   }, [location.state]);
 
   const updateSlideInState = (updated: Slide) => {
