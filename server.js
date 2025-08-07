@@ -142,6 +142,7 @@ async function dataIngestionAgent(text) { // The variable is named 'text'
     console.log('[Agent 0: Data Ingestion] Structuring raw text into JSON...');
     const prompt = `
         You are an expert business analyst. Analyze the entire Business Requirements Document (BRD) provided. Your task is to extract and synthesize all key information into a single, comprehensive JSON object.
+        Exclude any references to ERP, inventory management, custom development, or digital marketing solutions; if such items appear, omit them. Focus only on services a Shopify partner typically provides.
 
         Go beyond simple keyword extraction. Infer and structure the following:
         1.  **ClientProfile:** Company name, contact details, website, industry/vertical, and a brief summary of their business model.
@@ -222,6 +223,7 @@ async function contextualOverviewAgent(data) {
     console.log('[Agent 2: Contextual Overview] Generating high-level project summary...');
     const prompt = `
     You are a Senior Project Director. Using the provided JSON data, generate three distinct sections for a Scope of Work presentation. The tone must be professional and authoritative.
+    Do not reference ERP, inventory management, custom development, or digital marketing solutions. Focus on offerings aligned with Shopify partner capabilities.
 
     ---
     ### PART 1: PROJECT OVERVIEW
@@ -266,6 +268,7 @@ async function contextualOverviewAgent(data) {
  */
 async function headerAndIntroductionAgent(data, brandContext) {
     const prompt = ` You are a project manager preparing a Scope of Work document. Based on the structured JSON data provided, generate the introductory sections of the SOW. The output must be a single Markdown document that strictly follows this three-part structure, with no extra commentary or headings.
+Do not mention ERP, inventory management, custom development, or digital marketing solutions. Limit the scope to standard Shopify partner offerings.
 
 PART 1: DOCUMENT HEADER & TITLE
 Generate the document's main title and header information. The structure must be exactly:
@@ -295,8 +298,6 @@ Customer service: [Describe solution from BRD]
 SEO: [Describe solution from BRD]
 Design: [Describe solution from BRD]
 CRM: [Describe solution from BRD]
-Digital Marketing: [Describe solution from BRD]
-Custom: [Describe solution from BRD]
 PART 3: A PERSONAL INTRODUCTION
 Compose a letter-style introduction with the following precise structure.
 
@@ -334,6 +335,7 @@ async function essentialInfoAgent(data) {
     You are a technical writer tasked with documenting project specifications for a Scope of Work.
     Using the structured JSON data, generate three distinct sections: "Essential Info", "Data", and "Store Functionality".
     The output must be a single Markdown document. **For all key-value lists in this task, do not use pipe delimiters or markdown table syntax.** Format them as a bolded label followed by the value.
+    Omit any ERP, inventory management, custom development, or digital marketing solutions from all sections.
 
     ---
 
@@ -429,6 +431,7 @@ async function pagesAndTechAgent(data) {
     const prompt = `
     You are a solutions architect documenting the project's page and technology specifications for a Scope of Work.
     Generate two distinct sections: "Pages" and "Technology Stack".
+    Exclude any references to ERP, inventory management, custom development, or digital marketing solutions.
 
     ---
 
@@ -487,6 +490,7 @@ async function stakeholdersAndPurposeAgent(data, brandContext) {
     const prompt = `
     You are a senior project manager writing the strategic overview for a Scope of Work.
     Generate two distinct sections: "Stakeholders" and "Project Purpose".
+    Avoid mentioning ERP, inventory management, custom development, or digital marketing solutions.
 
     ---
 
@@ -529,6 +533,7 @@ async function projectScopeAgent(data) {
     You are a technical business analyst creating the detailed scope sections for a Scope of Work document.
     Generate two distinct, comprehensive sections: "Project Objectives and Overall Services" and "Scope of Work: Website Features".
     The output must be a single Markdown document.
+    Exclude any content related to ERP, inventory management, custom development, or digital marketing solutions.
 
     ---
 
@@ -586,6 +591,7 @@ async function thirdPartyAppsAgent(data, pricingData) {
     const prompt = `
     You are a technical consultant responsible for specifying third-party application requirements for a Scope of Work.
     Your task is to generate the "3rd Party App Considerations" section (Section 13).
+    Do not include any ERP, inventory management, custom development, or digital marketing solutions in this section.
     You must analyze the "Required Apps from BRD" and cross-reference them with the "Pricing Sheet Data" to create a series of detailed tables.
 
     The final output must be a single Markdown document with an introduction and multiple, functionally-grouped tables.
@@ -645,6 +651,7 @@ async function appCostSummaryAgent(appsMarkdown) {
     const prompt = `
     You are a project manager responsible for creating a clear cost summary for a Scope of Work.
     Your task is to parse the provided "3rd Party App Considerations Markdown" and generate the "3rd Party Shopify APP Costs" section (Section 14).
+    Exclude any ERP, inventory management, custom development, or digital marketing solutions from the summary.
 
     The output must be a single Markdown document containing one or more cost tables followed by standard boilerplate notes.
 
@@ -688,6 +695,7 @@ async function governanceAgent(data) {
     You are a senior project manager writing the governance and boundary-setting sections for a formal Scope of Work.
     Your task is to generate three sections: "Assumptions," "Change Request Management," and "Exclusions."
     The output must be clean, professional, and follow the specified format precisely.
+    Do not mention ERP, inventory management, custom development, or digital marketing solutions.
 
     ---
 
@@ -738,6 +746,7 @@ async function projectManagementAndDeliverablesAgent(data) {
     You are a PMP-certified senior project manager creating the final project process sections of a Scope of Work document.
     Your task is to generate the sections covering project management, monitoring, and deliverables using standard, professional boilerplate text.
     The output must be a single Markdown document structured precisely as follows.
+    Do not reference ERP, inventory management, custom development, or digital marketing solutions.
 
     ---
 
@@ -786,6 +795,7 @@ async function brandingAndGensparkInstructionsAgent(clientName, brandContext) {
     console.log('[Agent 11: Branding & Genspark Instructions] Generating branding guidelines and prompt...');
     const prompt = `
 Genspark.ai Presentation Generation Instructions Objective: To create a modern, professional, and client-facing SOW presentation that is fully aligned with the ${brandContext.brandName} brand identity.
+This presentation must not reference ERP, inventory management, custom development, or digital marketing solutions.
 Prompt for Genspark.ai: "Generate a slide deck presentation based on the provided Statement of Work markdown for our client, ${clientName}. The presentation must strictly adhere to the following branding and style guidelines.
 
 [cite_start]Overall Tone: The tone should be professional, confident, and clear[cite: 703, 706, 711]. It needs to reflect our position as industry leaders.
@@ -828,7 +838,6 @@ We offer several packages to meet your specific needs and budget. All pricing is
     - ✓ Complete platform migration
     - ✓ Premium theme implementation
     - ✓ Product, customer, and order data migration
-    - ✓ Basic SEO preservation & URL redirects
     - ✓ 30 days post-launch support
 
 ---
@@ -841,8 +850,6 @@ We offer several packages to meet your specific needs and budget. All pricing is
 - **Includes everything in Essential, plus:**
     - ✓ Advanced product filtering & search
     - ✓ Customer review system integration
-    - ✓ Email marketing & abandoned cart flows
-    - ✓ Advanced SEO & schema markup
     - ✓ 60 days post-launch support
 
 ---
@@ -852,7 +859,6 @@ We offer several packages to meet your specific needs and budget. All pricing is
 - **Indicative Price:** R [PRICE_PREMIUM] (Excl. VAT)
 - **Indicative Timeline:** [TIMELINE_PREMIUM] weeks
 - **Includes everything in Enhanced, plus:**
-    - ✓ Advanced loyalty program integration
     - ✓ Customer portal enhancements (e.g., wishlists)
     - ✓ A/B testing setup for optimization
     - ✓ Returns portal automation
@@ -882,6 +888,7 @@ async function dynamicPricingPackageAgent(pricingSummary) {
     You are a Senior Project Manager. You have been given a clean, structured JSON object that summarizes project pricing packages.
 
     Your task is to format this JSON data into a beautiful and clear markdown section titled "## Project Package Options".
+    Exclude any package features related to ERP, inventory management, custom development, or digital marketing solutions.
 
     For each package in the 'pricingPackages' array, you must:
     1.  Create a clear heading for the package (e.g., "### Package A: Essential").
@@ -923,6 +930,7 @@ async function pricingDataProcessorAgent(pricingData) {
     console.log('[Agent 14: Pricing Pre-processor] Summarizing raw pricing data into structured JSON...');
     const prompt = `
     You are a data processing expert. Analyze the following array of pricing data, which was extracted from a spreadsheet. Your task is to convert this raw data into a clean, structured JSON object.
+    Omit any entries related to ERP, inventory management, custom development, or digital marketing solutions.
 
     The JSON object should have a single key, "pricingPackages", which is an array of package objects.
 
